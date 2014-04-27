@@ -1,4 +1,4 @@
-semantic_map_client_lib
-=======================
+Semantic map client
+===================
 
-Client libraries to access semantic maps
+Client libraries to access semantic maps.
