@@ -88,13 +88,13 @@ class AnnotationCollection:
             else:
                 rospy.loginfo('No annotations found for map %s with the given search criteria', world_id)
         else:
-            rospy.logerror('Server reported an error: ', response.message)
+            rospy.logerr('Server reported an error: ', response.message)
 
         return response.result
 
     def loadData(self):    
         if self.annotations is None:
-            rospy.logerror('No annotations retrieved. Nothing to load!')
+            rospy.logerr('No annotations retrieved. Nothing to load!')
             return False
             
         rospy.loginfo("Waiting for get_annotations_data service...")
@@ -111,13 +111,13 @@ class AnnotationCollection:
             else:
                 rospy.logwarn('No data found for the %d retrieved annotations', len(self.annotations))
         else:
-            rospy.logerror('Server reported an error: ', response.message)
+            rospy.logerr('Server reported an error: ', response.message)
 
         return response.result
     
     def publishMarkers(self, topic):
         if self.annotations is None:
-            rospy.logerror('No annotations retrieved. Nothing to publish!')
+            rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
             
         # Advertise a topic for retrieved annotations' visualization markers
@@ -149,7 +149,7 @@ class AnnotationCollection:
 
     def publish(self, topic_name, topic_type, by_server = False, as_list = False):
         if self.annotations is None:
-            rospy.logerror('No annotations retrieved. Nothing to publish!')
+            rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
             
         if by_server:
@@ -161,7 +161,7 @@ class AnnotationCollection:
             pub_data_srv = rospy.ServiceProxy('pub_annotations_data', world_canvas_msgs.srv.PubAnnotationsData)
             response = pub_data_srv([a.id for a in self.annotations], topic_name, topic_type, as_list)
             if not response.result:
-                rospy.logerror('Server reported an error: ', response.message)
+                rospy.logerr('Server reported an error: ', response.message)
             return response.result
         else:
             # Advertise a topic to publish retrieved annotations
