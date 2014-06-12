@@ -121,7 +121,7 @@ class AnnotationCollection:
             return False
             
         # Advertise a topic for retrieved annotations' visualization markers
-        markers_pub = rospy.Publisher(topic, MarkerArray, latch = True)
+        markers_pub = rospy.Publisher(topic, MarkerArray, latch = True, queue_size=5)
     
         # Process retrieved data to build markers lists
         markers_list = MarkerArray()    
@@ -166,7 +166,7 @@ class AnnotationCollection:
         else:
             # Advertise a topic to publish retrieved annotations
             topic_class = roslib.message.get_message_class(topic_type)
-            objects_pub = rospy.Publisher(topic_name, topic_class, latch = True)
+            objects_pub = rospy.Publisher(topic_name, topic_class, latch = True, queue_size=5)
 
             # Process retrieved data to build annotations lists
             objects_list = list()
