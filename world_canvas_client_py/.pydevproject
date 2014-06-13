@@ -7,7 +7,6 @@
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>/opt/ros/hydro/share/mk</path>
 <path>/usr/local/lib/python2.7/dist-packages/catkinize-0.1-py2.7.egg</path>
-<path>/usr/local/lib/python2.7/dist-packages/pymongo-2.7-py2.7-linux-x86_64.egg</path>
 <path>/home/jorge/workspaces/semantic_maps/devel/lib/python2.7/dist-packages</path>
 <path>/opt/ros/hydro/lib/python2.7/dist-packages</path>
 <path>/usr/lib/python2.7</path>
