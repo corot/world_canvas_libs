@@ -48,8 +48,8 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 class AnnotationCollection:
 
-    def __init__(self, world_id = None, id = [], type = [], keyword = [], related = []):
-        """
+    def __init__(self, world_id=None, id=[], type=[], keyword=[], related=[]):
+        '''
         @param world_id: Annotations in this collection belong to this world
         @param id:       Filter annotations by their uuid
         @param type:     Filter annotations by their type
@@ -61,7 +61,7 @@ class AnnotationCollection:
         the described parameters.
         This class can also publish the retrieved annotations and RViz visualization
         markers, mostly for debug purposes.
-        """
+        '''
         self.annotations = None
         self.annots_data = None
         
@@ -71,7 +71,7 @@ class AnnotationCollection:
             
         return
     
-    def filterBy(self, world_id, id = [], type = [], keyword = [], related = []):
+    def filterBy(self, world_id, id=[], type=[], keyword=[], related=[]):
         rospy.loginfo("Waiting for get_annotations service...")
         rospy.wait_for_service('get_annotations')
     
@@ -136,7 +136,6 @@ class AnnotationCollection:
             marker.action = Marker.ADD
             marker.lifetime = rospy.Duration.from_sec(0)
             marker.pose = copy.deepcopy(a.pose.pose.pose)
-    #        marker.pose.position.z += marker.pose.position.z/2.0
             marker.scale = a.size
             marker.color = a.color
     
@@ -147,7 +146,7 @@ class AnnotationCollection:
         markers_pub.publish(markers_list)
         return True
 
-    def publish(self, topic_name, topic_type, by_server = False, as_list = False):
+    def publish(self, topic_name, topic_type, by_server=False, as_list=False):
         if self.annotations is None:
             rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
