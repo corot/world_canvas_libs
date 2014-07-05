@@ -12,11 +12,12 @@ if __name__ == '__main__':
     pub_as_list = rospy.get_param('~pub_as_list', False)
     world_id = rospy.get_param('~world_id')
     ids      = rospy.get_param('~ids', [])
+    names    = rospy.get_param('~names', [])
     types    = rospy.get_param('~types', [])
     keywords = rospy.get_param('~keywords', [])
     related  = rospy.get_param('~relationships', [])
 
-    ac = world_canvas_client.AnnotationCollection(world_id, ids, types, keywords, related)
+    ac = world_canvas_client.AnnotationCollection(world_id, ids, names, types, keywords, related)
     ac.loadData()
 
     # Publish annotations' visual markers on client side

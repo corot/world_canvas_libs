@@ -48,10 +48,11 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 class AnnotationCollection:
 
-    def __init__(self, world_id=None, id=[], type=[], keyword=[], related=[]):
+    def __init__(self, world_id=None, id=[], name=[], type=[], keyword=[], related=[]):
         '''
         @param world_id: Annotations in this collection belong to this world
         @param id:       Filter annotations by their uuid
+        @param name:     Filter annotations by their name
         @param type:     Filter annotations by their type
         @param keyword:  Filter annotations by their keywords
         @param related:  Filter annotations by their relationships
@@ -67,11 +68,11 @@ class AnnotationCollection:
         
         if world_id is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
-            self.filterBy(world_id, id, type, keyword, related)
+            self.filterBy(world_id, id, name, type, keyword, related)
             
         return
     
-    def filterBy(self, world_id, id=[], type=[], keyword=[], related=[]):
+    def filterBy(self, world_id, id=[], name=[], type=[], keyword=[], related=[]):
         rospy.loginfo("Waiting for get_annotations service...")
         rospy.wait_for_service('get_annotations')
     
@@ -79,7 +80,7 @@ class AnnotationCollection:
         get_anns_srv = rospy.ServiceProxy('get_annotations', world_canvas_msgs.srv.GetAnnotations)
         response = get_anns_srv(unique_id.toMsg(uuid.UUID('urn:uuid:' + world_id)),
                                [unique_id.toMsg(uuid.UUID('urn:uuid:' + annot_id)) for annot_id in id],
-                                type, keyword, [], [], [], related)  # 3 filters unimplemented
+                                name, type, keyword, [], [], [], related)  # 3 filters unimplemented
 
         if response.result:
             if len(response.annotations) > 0:
