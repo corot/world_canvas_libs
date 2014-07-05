@@ -73,6 +73,17 @@ class AnnotationCollection:
         return
     
     def filterBy(self, world_id, id=[], name=[], type=[], keyword=[], related=[]):
+        '''
+        @param world_id: Annotations in this collection belong to this world
+        @param id:       Filter annotations by their uuid
+        @param name:     Filter annotations by their name
+        @param type:     Filter annotations by their type
+        @param keyword:  Filter annotations by their keywords
+        @param related:  Filter annotations by their relationships
+        @returns True on success, False otherwise.
+        
+        Reload annotations collection, filtered by new selection criteria.
+        '''
         rospy.loginfo("Waiting for get_annotations service...")
         rospy.wait_for_service('get_annotations')
     
@@ -94,6 +105,11 @@ class AnnotationCollection:
         return response.result
 
     def loadData(self):    
+        '''
+        @returns True on success, False otherwise.
+        
+        Load associated data for the current annotations collection.
+        '''
         if self.annotations is None:
             rospy.logerr('No annotations retrieved. Nothing to load!')
             return False
@@ -117,6 +133,12 @@ class AnnotationCollection:
         return response.result
     
     def publishMarkers(self, topic):
+        '''
+        @param topic: Where we must publish annotations markers.
+        @returns True on success, False otherwise.
+        
+        Publish RViz visualization markers for the current collection of annotations.
+        '''
         if self.annotations is None:
             rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
@@ -147,11 +169,37 @@ class AnnotationCollection:
         markers_pub.publish(markers_list)
         return True
 
-    def publish(self, topic_name, topic_type, by_server=False, as_list=False):
+    def publish(self, topic_name, topic_type=None, by_server=False, as_list=False):
+        '''
+        @param topic_name: Where we must publish annotations data.
+        @param topic_type: The message type to publish annotations data.
+                           Mandatory if pub_as_list is true; ignored otherwise.
+        @param by_server:  Request the server to publish the annotations instead of this client.
+        @param as_list:    If true, annotations will be packed in a list before publishing,
+                           so topic_type must be an array of currently loaded annotations.
+        @returns True on success, False otherwise.
+        
+        Publish the current collection of annotations, by this client or by the server.
+        As we use just one topic, all annotations must be of the same type (function will return
+        with error otherwise.
+        '''
         if self.annotations is None:
             rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
             
+        if topic_type is None:
+            if as_list:
+                rospy.logerr("Topic type argument is mandatory if as_list is true")
+                return False
+            else:
+                # Take annotations type and verify that it's the same within the
+                # collection (as we will publish all of them in the same topic)
+                for a in self.annotations:
+                    if topic_type is not None and topic_type != a.type:
+                        rospy.logerr("Cannot publish annotations of different types (%s, %s)" % (topic_type, a.type))
+                        return False
+                    topic_type = a.type
+                    
         if by_server:
             rospy.loginfo("Waiting for pub_annotations_data service...")
             rospy.wait_for_service('pub_annotations_data')
@@ -161,11 +209,16 @@ class AnnotationCollection:
             pub_data_srv = rospy.ServiceProxy('pub_annotations_data', world_canvas_msgs.srv.PubAnnotationsData)
             response = pub_data_srv([a.data_id for a in self.annotations], topic_name, topic_type, as_list)
             if not response.result:
-                rospy.logerr('Server reported an error: ', response.message)
+                rospy.logerr('Server reported an error: %s' % response.message)
             return response.result
         else:
             # Advertise a topic to publish retrieved annotations
             topic_class = roslib.message.get_message_class(topic_type)
+            if topic_class is None:
+                # This happens if the topic type is wrong or not known (i.e. absent from ROS_PACKAGE_PATH)
+                rospy.logerr("Topic type %s definition not found" % topic_type)
+                return False
+
             objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
 
             # Process retrieved data to build annotations lists
