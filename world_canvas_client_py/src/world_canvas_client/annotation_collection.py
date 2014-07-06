@@ -91,7 +91,8 @@ class AnnotationCollection:
         get_anns_srv = rospy.ServiceProxy('get_annotations', world_canvas_msgs.srv.GetAnnotations)
         response = get_anns_srv(unique_id.toMsg(uuid.UUID('urn:uuid:' + world_id)),
                                [unique_id.toMsg(uuid.UUID('urn:uuid:' + annot_id)) for annot_id in id],
-                                name, type, keyword, [], [], [], related)  # 3 filters unimplemented
+                                name, type, keyword,
+                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + relat_id)) for relat_id in related])
 
         if response.result:
             if len(response.annotations) > 0:
