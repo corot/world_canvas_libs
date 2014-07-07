@@ -100,6 +100,7 @@ class AnnotationCollection:
                 self.annotations = response.annotations
             else:
                 rospy.loginfo('No annotations found for map %s with the given search criteria', world_id)
+                self.annotations = None
         else:
             rospy.logerr('Server reported an error: ', response.message)
 
