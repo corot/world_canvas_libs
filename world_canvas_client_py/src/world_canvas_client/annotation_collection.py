@@ -129,6 +129,7 @@ class AnnotationCollection:
                 self.annots_data = response.data
             else:
                 rospy.logwarn('No data found for the %d retrieved annotations', len(self.annotations))
+                self.annots_data = None
         else:
             rospy.logerr('Server reported an error: ', response.message)
 
@@ -183,7 +184,7 @@ class AnnotationCollection:
         
         Publish the current collection of annotations, by this client or by the server.
         As we use just one topic, all annotations must be of the same type (function will return
-        with error otherwise.
+        with error otherwise).
         '''
         if self.annotations is None:
             rospy.logerr('No annotations retrieved. Nothing to publish!')

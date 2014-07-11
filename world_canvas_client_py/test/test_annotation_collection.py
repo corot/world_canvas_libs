@@ -6,7 +6,7 @@ import rospy
 import world_canvas_client
 
 if __name__ == '__main__':
-    rospy.init_node('objects_loader')
+    rospy.init_node('test_annotation_collection')
     topic_name  = rospy.get_param('~topic_name', 'annotations')
     topic_type  = rospy.get_param('~topic_type', None)
     pub_as_list = rospy.get_param('~pub_as_list', False)
