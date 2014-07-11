@@ -13,6 +13,8 @@
 
 #include <uuid_msgs/UniqueID.h>
 
+typedef uuid_msgs::UniqueID UniqueIDmsg;
+
 /**
  * Annotations filter criteria to pass to the world canvas server. The only
  * mandatory criteria is the world_id.
@@ -26,8 +28,6 @@
 class FilterCriteria
 {
 private:
-  typedef uuid_msgs::UniqueID UniqueIDmsg;
-
   UniqueIDmsg              world_id;
   std::string              world_name;
   std::vector<UniqueIDmsg> uuids;

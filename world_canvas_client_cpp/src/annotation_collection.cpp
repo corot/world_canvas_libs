@@ -7,48 +7,50 @@
 
 #include <ros/ros.h>
 #include <world_canvas_msgs/GetAnnotations.h>
-//#include <geometry_msgs*
-//  from rospy_message_converter import message_converter
+#include <world_canvas_msgs/GetAnnotationsData.h>
+#include <world_canvas_msgs/PubAnnotationsData.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include "world_canvas_client_cpp/annotation_collection.hpp"
+
 
 AnnotationCollection::AnnotationCollection(const std::string& world_id)
   : filter(FilterCriteria(world_id))
 {
 }
 
-AnnotationCollection::AnnotationCollection(const FilterCriteria& filter)
-  : filter(filter)
+AnnotationCollection::AnnotationCollection(const FilterCriteria& criteria)
+  : filter(criteria)
 {
-
-//  if world_id is not None:
-//      # Filter parameters provided, so don't wait more to retrieve annotations!
-//      self.filterBy(world_id, id, name, type, keyword, related)
-//
-//  return
+  // Filter parameters provided, so don't wait more to retrieve annotations!
+  this->filterBy(criteria);
 }
 
-bool AnnotationCollection::filterBy(const FilterCriteria& filter)
+bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
 {
-  this->filter = filter;
+  this->filter = criteria;
 
   ros::NodeHandle nh;
-  ros::ServiceClient client = nh.serviceClient<world_canvas_msgs::GetAnnotations>("get_annotations");
-  world_canvas_msgs::GetAnnotations srv;
-  srv.request.world_id      = filter.getWorldId();
-  srv.request.ids           = filter.getUuids();
-  srv.request.names         = filter.getNames();
-  srv.request.types         = filter.getTypes();
-  srv.request.keywords      = filter.getKeywords();
-  srv.request.relationships = filter.getRelationships();
+  ros::ServiceClient client =
+      nh.serviceClient<world_canvas_msgs::GetAnnotations>("get_annotations");
 
   ROS_INFO("Waiting for get_annotations service...");
-//  rospy.wait_for_service('get_annotations')
+  if (client.waitForExistence(ros::Duration(5.0)) == false)
+  {
+    ROS_ERROR("get_annotations service not available after 5s");
+    return false;
+  }
 
   ROS_INFO("Getting annotations for world %s and additional filter criteria",
-           filter.getWorldName().c_str());
+           this->filter.getWorldName().c_str());
+  world_canvas_msgs::GetAnnotations srv;
+  srv.request.world_id      = this->filter.getWorldId();
+  srv.request.ids           = this->filter.getUuids();
+  srv.request.names         = this->filter.getNames();
+  srv.request.types         = this->filter.getTypes();
+  srv.request.keywords      = this->filter.getKeywords();
+  srv.request.relationships = this->filter.getRelationships();
   if (client.call(srv))
   {
     if (srv.response.result == true)
@@ -60,7 +62,7 @@ bool AnnotationCollection::filterBy(const FilterCriteria& filter)
       else
       {
         ROS_INFO("No annotations found for world %s with the given search criteria",
-                 filter.getWorldName().c_str());
+                 this->filter.getWorldName().c_str());
       }
       this->annotations = srv.response.annotations;
       return true;
@@ -86,140 +88,225 @@ bool AnnotationCollection::filterBy(const FilterCriteria& filter)
 
 AnnotationCollection::~AnnotationCollection()
 {
-  // TODO Auto-generated destructor stub
 }
 
 
-//def loadData(self):
-//    '''
-//    @returns True on success, False otherwise.
+bool AnnotationCollection::loadData()
+{
+  if (this->annotations.size() == 0)
+  {
+    ROS_ERROR("No annotations retrieved. Nothing to load!");
+    return false;
+  }
+
+  ros::NodeHandle nh;
+  ros::ServiceClient client =
+      nh.serviceClient<world_canvas_msgs::GetAnnotationsData>("get_annotations_data");
+
+  ROS_INFO("Waiting for get_annotations_data service...");
+  if (client.waitForExistence(ros::Duration(5.0)) == false)
+  {
+    ROS_ERROR("get_annotations_data service not available after 5s");
+    return false;
+  }
+
+  // Request from server the data for annotations previously retrieved; note that we send data
+  // uuids, that identify the data associated to the annotation instead of the annotation itself
+  ROS_INFO("Loading data for the %lu retrieved annotations", this->annotations.size());
+  world_canvas_msgs::GetAnnotationsData srv;
+  srv.request.annotation_ids = this->getAnnotsDataIDs();
+  if (client.call(srv))
+  {
+    if (srv.response.result == true)
+    {
+      if (srv.response.data.size() > 0)
+      {
+        ROS_INFO("%lu annotations data found", srv.response.data.size());
+      }
+      else
+      {
+        ROS_INFO("No data found for the %lu retrieved annotations", this->annotations.size());
+      }
+      this->annots_data = srv.response.data;
+      return true;
+    }
+    else
+    {
+      ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+      return false;
+    }
+  }
+  else
+  {
+    ROS_ERROR("Failed to call get_annotations_data service");
+    return false;
+  }
+}
+
+bool AnnotationCollection::publishMarkers(const std::string& topic)
+{
+  if (this->annotations.size() == 0)
+  {
+    ROS_ERROR("No annotations retrieved. Nothing to publish!");
+    return false;
+  }
+
+  // Advertise a topic for retrieved annotations' visualization markers
+  markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+
+  // Process retrieved data to build markers lists
+  visualization_msgs::MarkerArray markers_array;
+  for (unsigned int i = 0; i < this->annotations.size(); i++)
+  {
+    visualization_msgs::Marker marker;
+    marker.id     = i;
+    marker.header = annotations[i].pose.header;
+    marker.type   = annotations[i].shape;
+    marker.ns     = annotations[i].type;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose   = annotations[i].pose.pose.pose;
+    marker.scale  = annotations[i].size;
+    marker.color  = annotations[i].color;
+
+    markers_array.markers.push_back(marker);
+  }
+
+  markers_pub.publish(markers_array);
+  return true;
+}
+
+bool AnnotationCollection::publish(const std::string& topic_name, bool by_server, bool as_list,
+                                   const std::string& topic_type)
+{
+  if (this->annotations.size() == 0)
+  {
+    ROS_ERROR("No annotations retrieved. Nothing to publish!");
+    return false;
+  }
+
+  std::string common_tt = topic_type;
+
+  if (common_tt.empty() == true)
+  {
+    if (as_list == true)
+    {
+      ROS_ERROR("Topic type argument is mandatory if as_list is true");
+      return false;
+    }
+    else
+    {
+      // Take annotations type and verify that it's the same within the
+      // collection (as we will publish all of them in the same topic)
+      for (unsigned int i = 0; i < this->annotations.size(); i++)
+      {
+        if ((common_tt.empty() == false) && (common_tt != annotations[i].type))
+        {
+          ROS_ERROR("Cannot publish annotations of different types (%s, %s)",
+                    common_tt.c_str(), annotations[i].type.c_str());
+          return false;
+        }
+        common_tt = annotations[i].type;
+      }
+    }
+  }
+
+  if (by_server == true)
+  {
+    ros::NodeHandle nh;
+    ros::ServiceClient client =
+        nh.serviceClient<world_canvas_msgs::PubAnnotationsData>("pub_annotations_data");
+    ROS_INFO("Waiting for pub_annotations_data service...");
+    if (client.waitForExistence(ros::Duration(5.0)) == false)
+    {
+      ROS_ERROR("pub_annotations_data service not available after 5s");
+      return false;
+    }
+
+    // Request server to publish the annotations previously retrieved; note that we send the data
+    // uuids, that identify the data associated to the annotation instead of the annotation itself
+    ROS_INFO("Requesting server to publish annotations");
+    world_canvas_msgs::PubAnnotationsData srv;
+    srv.request.annotation_ids = this->getAnnotsDataIDs();
+    srv.request.topic_name = topic_name;
+    srv.request.topic_type = common_tt;
+    srv.request.pub_as_list = as_list;
+    if (client.call(srv))
+    {
+      if (srv.response.result == true)
+      {
+        return true;
+      }
+      else
+      {
+        ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+        return false;
+      }
+    }
+    else
+    {
+      ROS_ERROR("Failed to call pub_annotations_data service");
+      return false;
+    }
+  }
+  else
+  {
+    // TODO: we cannot publish here without the messages class, as we did with Python. Maybe I can
+    // use templates, as the user of this class knows the message class. Or I can even make this a
+    // template class, assuming annotations collections have a uniform type.
+    // See https://github.com/corot/world_canvas/issues/5 for details
+    ROS_ERROR("Publish by client not implemented!");
+    return false;
+  }
+}
+//  else
+//  {
+//    // Advertise a topic to publish retrieved annotations data
+//    topic_class = roslib.message.get_message_class(common_tt)
+//    if topic_class is None:
+//      # This happens if the topic type is wrong or not known (i.e. absent from ROS_PACKAGE_PATH)
+//      ROS_ERROR("Topic type %s definition not found" % common_tt)
+//      return False
+//  }
 //
-//    Load associated data for the current annotations collection.
-//    '''
-//    if self.annotations is None:
-//        ROS_ERROR('No annotations retrieved. Nothing to load!')
-//        return False
+//  ros::NodeHandle nh;
+//  ros::Publisher pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
 //
-//    ROS_INFO("Waiting for get_annotations_data service...")
-//    rospy.wait_for_service('get_annotations_data')
+//      objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
 //
-//    ROS_INFO('Loading data for the %d retrieved annotations', len(self.annotations))
-//    get_data_srv = rospy.ServiceProxy('get_annotations_data', world_canvas_msgs.srv.GetAnnotationsData)
-//    response = get_data_srv([a.data_id for a in self.annotations])
+//      # Process retrieved data to build annotations lists
+//      objects_list = list()
 //
-//    if response.result:
-//        if len(response.data) > 0:
-//            ROS_INFO('%d annotations data retrieved', len(response.data))
-//            self.annots_data = response.data
-//        else:
-//            ROS_WARN('No data found for the %d retrieved annotations', len(self.annotations))
-//    else:
-//        ROS_ERROR('Server reported an error: ', response.message)
+//      for d in this->annots_data:
+//          object = pickle.loads(d.data)
+//          objects_list.append(object)
 //
-//    return response.result
+//      # Publish resulting list
+//      if as_list:
+//          objects_pub.publish(objects_list)
+//      else:
+//          # if as_list is false, publish objects one by one
+//          for object in objects_list:
+//              objects_pub.publish(object)
 //
-//def publishMarkers(self, topic):
-//    '''
-//    @param topic: Where we must publish annotations markers.
-//    @returns True on success, False otherwise.
-//
-//    Publish RViz visualization markers for the current collection of annotations.
-//    '''
-//    if self.annotations is None:
-//        ROS_ERROR('No annotations retrieved. Nothing to publish!')
-//        return False
-//
-//    # Advertise a topic for retrieved annotations' visualization markers
-//    markers_pub = rospy.Publisher(topic, MarkerArray, latch=True, queue_size=5)
-//
-//    # Process retrieved data to build markers lists
-//    markers_list = MarkerArray()
-//
-//    marker_id = 1
-//    for a in self.annotations:
-//        marker = Marker()
-//        marker.id = marker_id
-//        marker.header = a.pose.header
-//        marker.type = a.shape
-//        marker.ns = a.type
-//        marker.action = Marker.ADD
-//        marker.lifetime = rospy.Duration.from_sec(0)
-//        marker.pose = copy.deepcopy(a.pose.pose.pose)
-//        marker.scale = a.size
-//        marker.color = a.color
-//
-//        markers_list.markers.append(marker)
-//
-//        marker_id = marker_id + 1
-//
-//    markers_pub.publish(markers_list)
-//    return True
-//
-//def publish(self, topic_name, topic_type=None, by_server=False, as_list=False):
-//    '''
-//    @param topic_name: Where we must publish annotations data.
-//    @param topic_type: The message type to publish annotations data.
-//                       Mandatory if pub_as_list is true; ignored otherwise.
-//    @param by_server:  Request the server to publish the annotations instead of this client.
-//    @param as_list:    If true, annotations will be packed in a list before publishing,
-//                       so topic_type must be an array of currently loaded annotations.
-//    @returns True on success, False otherwise.
-//
-//    Publish the current collection of annotations, by this client or by the server.
-//    As we use just one topic, all annotations must be of the same type (function will return
-//    with error otherwise.
-//    '''
-//    if self.annotations is None:
-//        ROS_ERROR('No annotations retrieved. Nothing to publish!')
-//        return False
-//
-//    if topic_type is None:
-//        if as_list:
-//            ROS_ERROR("Topic type argument is mandatory if as_list is true")
-//            return False
-//        else:
-//            # Take annotations type and verify that it's the same within the
-//            # collection (as we will publish all of them in the same topic)
-//            for a in self.annotations:
-//                if topic_type is not None and topic_type != a.type:
-//                    ROS_ERROR("Cannot publish annotations of different types (%s, %s)" % (topic_type, a.type))
-//                    return False
-//                topic_type = a.type
-//
-//    if by_server:
-//        ROS_INFO("Waiting for pub_annotations_data service...")
-//        rospy.wait_for_service('pub_annotations_data')
-//
-//        # Request server to publish the annotations previously retrieved
-//        ROS_INFO('Requesting server to publish annotations')
-//        pub_data_srv = rospy.ServiceProxy('pub_annotations_data', world_canvas_msgs.srv.PubAnnotationsData)
-//        response = pub_data_srv([a.data_id for a in self.annotations], topic_name, topic_type, as_list)
-//        if not response.result:
-//            ROS_ERROR('Server reported an error: %s' % response.message)
-//        return response.result
-//    else:
-//        # Advertise a topic to publish retrieved annotations
-//        topic_class = roslib.message.get_message_class(topic_type)
-//        if topic_class is None:
-//            # This happens if the topic type is wrong or not known (i.e. absent from ROS_PACKAGE_PATH)
-//            ROS_ERROR("Topic type %s definition not found" % topic_type)
-//            return False
-//
-//        objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
-//
-//        # Process retrieved data to build annotations lists
-//        objects_list = list()
-//
-//        for d in self.annots_data:
-//            object = pickle.loads(d.data)
-//            objects_list.append(object)
-//
-//        # Publish resulting list
-//        if as_list:
-//            objects_pub.publish(objects_list)
-//        else:
-//            # if as_list is false, publish objects one by one
-//            for object in objects_list:
-//                objects_pub.publish(object)
-//
-//    return True
+//  return True
+//}
+
+std::vector<UniqueIDmsg> AnnotationCollection::getAnnotationIDs()
+{
+  std::vector<UniqueIDmsg> uuids(annotations.size());
+  for (unsigned int i = 0; i < annotations.size(); i++)
+  {
+    uuids[i] = annotations[i].id;
+  }
+  return uuids;
+}
+
+std::vector<UniqueIDmsg> AnnotationCollection::getAnnotsDataIDs()
+{
+  std::vector<UniqueIDmsg> uuids(annotations.size());
+  for (unsigned int i = 0; i < annotations.size(); i++)
+  {
+    uuids[i] = annotations[i].data_id;
+  }
+  return uuids;
+}
