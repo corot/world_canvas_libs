@@ -7,7 +7,11 @@
 
 #include <ros/ros.h>
 
-#include "world_canvas_client_cpp/annotation_collection.hpp"
+#include <yocs_msgs/Wall.h>
+#include <yocs_msgs/Column.h>
+#include <nav_msgs/OccupancyGrid.h>
+
+#include <world_canvas_client_cpp/annotation_collection.hpp>
 
 
 int main(int argc, char** argv)
@@ -52,7 +56,26 @@ int main(int argc, char** argv)
   // Request server to publish the annotations
   ac.publish(topic_name, true, pub_as_list, topic_type);
 
-  ROS_INFO("Done");
+  std::vector<yocs_msgs::Wall> walls;
+  std::vector<yocs_msgs::Column> columns;
+  std::vector<nav_msgs::OccupancyGrid> maps;
+
+  ROS_INFO("Done    %u   %u   %u",
+           ac.getData("yocs_msgs/Wall", walls),
+           ac.getData("yocs_msgs/Column", columns),
+           ac.getData("nav_msgs/OccupancyGrid", maps));
+  ROS_INFO("Done    %lu   %lu   %lu", walls.size(), columns.size(), maps.size());
+  ros::Publisher wp = nh.advertise<yocs_msgs::Wall> ("walls_on_client", 1, true);
+  ros::Publisher cp = nh.advertise<yocs_msgs::Column> ("columns_on_client", 1, true);
+  ros::Publisher mp = nh.advertise<nav_msgs::OccupancyGrid> ("maps_on_client", 1, true);
+
+  for (unsigned int i = 0; i < walls.size(); i++)
+    wp.publish(walls[i]);
+  for (unsigned int i = 0; i < columns.size(); i++)
+    cp.publish(columns[i]);
+  for (unsigned int i = 0; i < maps.size(); i++)
+    mp.publish(maps[i]);
+
   ros::spin();
 
   return 0;

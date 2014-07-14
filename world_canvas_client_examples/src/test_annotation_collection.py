@@ -5,6 +5,8 @@ import rospy
 
 import world_canvas_client
 
+from yocs_msgs.msg import *
+
 if __name__ == '__main__':
     rospy.init_node('test_annotation_collection')
     topic_name  = rospy.get_param('~topic_name', 'annotations')
@@ -19,6 +21,7 @@ if __name__ == '__main__':
 
     ac = world_canvas_client.AnnotationCollection(world_id, ids, names, types, keywords, related)
     ac.loadData()
+    walls = ac.getData(yocs_msgs.msg.Wall)
 
     # Publish annotations' visual markers on client side
     ac.publishMarkers('annotation_markers')
