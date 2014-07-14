@@ -33,12 +33,13 @@
 #
 # Author: Jorge Santos
 
+import genpy
 import rospy
 import roslib
 import copy
 import uuid
 import unique_id
-import cPickle as pickle
+import cStringIO as StringIO
 import world_canvas_msgs.msg
 import world_canvas_msgs.srv
 
@@ -135,6 +136,32 @@ class AnnotationCollection:
 
         return response.result
     
+    def getData(self, type):
+        result = list()
+        
+        for ad in self.annots_data: 
+            buffer = StringIO.StringIO()
+            buffer.write(ad.data)
+        
+            msg_queue = list()
+            try:
+                rospy.msg.deserialize_messages(buffer, msg_queue, type)
+            except genpy.DeserializationError as e:
+                # rospy.logerr('Deserialization failed: %s' % str(e))
+                # TODO/WARN: this is ok, as I'm assuming that deserialize will always fail with messages of
+                # different types, so I use it as filter. It works by now BUT I'm not 100% sure about that!
+                # The TODO is that I should organize both annotations and data in a unified list. Once I have
+                # it, make a version of this method with default param type=None and use annotation.type to
+                # deserialize each object
+                continue
+            if len(msg_queue) > 0:
+                result.append(msg_queue.pop())
+            if len(msg_queue) > 0:
+                # This should be impossible
+                rospy.logwarn('More than one object deserialized (%d)!' % len(msg_queue) + 1)
+
+        return result;
+
     def publishMarkers(self, topic):
         '''
         @param topic: Where we must publish annotations markers.
@@ -176,7 +203,7 @@ class AnnotationCollection:
         '''
         @param topic_name: Where we must publish annotations data.
         @param topic_type: The message type to publish annotations data.
-                           Mandatory if pub_as_list is true; ignored otherwise.
+                           Mandatory if as_list is true; ignored otherwise.
         @param by_server:  Request the server to publish the annotations instead of this client.
         @param as_list:    If true, annotations will be packed in a list before publishing,
                            so topic_type must be an array of currently loaded annotations.
@@ -189,20 +216,7 @@ class AnnotationCollection:
         if self.annotations is None:
             rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
-            
-        if topic_type is None:
-            if as_list:
-                rospy.logerr("Topic type argument is mandatory if as_list is true")
-                return False
-            else:
-                # Take annotations type and verify that it's the same within the
-                # collection (as we will publish all of them in the same topic)
-                for a in self.annotations:
-                    if topic_type is not None and topic_type != a.type:
-                        rospy.logerr("Cannot publish annotations of different types (%s, %s)" % (topic_type, a.type))
-                        return False
-                    topic_type = a.type
-                    
+
         if by_server:
             rospy.loginfo("Waiting for pub_annotations_data service...")
             rospy.wait_for_service('pub_annotations_data')
@@ -215,21 +229,46 @@ class AnnotationCollection:
                 rospy.logerr('Server reported an error: %s' % response.message)
             return response.result
         else:
-            # Advertise a topic to publish retrieved annotations
-            topic_class = roslib.message.get_message_class(topic_type)
-            if topic_class is None:
-                # This happens if the topic type is wrong or not known (i.e. absent from ROS_PACKAGE_PATH)
-                rospy.logerr("Topic type %s definition not found" % topic_type)
-                return False
+            # Take annotations message type and verify that it's the same within the collection,
+            # as we will publish all the elements with the same topic (as a list or one by one)
+            for a in self.annotations:
+                if 'msg_type' not in locals():
+                    msg_type = a.type
+                elif msg_type != a.type:
+                    rospy.logerr("Cannot publish annotations of different types (%s, %s)" % (msg_type, a.type))
+                    return False
 
+            if 'msg_type' not in locals():
+                rospy.logerr('Annotations message type not found? impossible! (we already checked at method start)')
+                return False
+    
+            # Keep the class of the messages to be published; we need it later when deserializing them
+            msg_class = roslib.message.get_message_class(msg_type)
+            if msg_class is None:
+                # This could happen if the message type is wrong or not known for the server (i.e. its
+                # package is not on ROS_PACKAGE_PATH). Both cases are really weird in the client side.
+                rospy.logerr('Topic type %s definition not found' % topic_type)
+                return False
+            
+            # Advertise a topic with message type topic_type if we will publish results as a list (note that we
+            # ignore list's type) or use current annotations type otherwise (we have verified that it's unique) 
+            if as_list:
+                if topic_type is None:
+                    rospy.logerr("Topic type argument is mandatory if as_list is true")
+                    return False
+                topic_class = roslib.message.get_message_class(topic_type)
+                if topic_class is None:
+                    # Same comment as in "msg_class is None" applies here
+                    rospy.logerr('Topic type %s definition not found' % topic_type)
+                    return False
+            else:
+                topic_class = msg_class
+            
+            # Advertise a topic to publish retrieved annotations
             objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
 
             # Process retrieved data to build annotations lists
-            objects_list = list()
-
-            for d in self.annots_data:
-                object = pickle.loads(d.data)
-                objects_list.append(object)
+            objects_list = self.getData(msg_class)
 
             # Publish resulting list
             if as_list:

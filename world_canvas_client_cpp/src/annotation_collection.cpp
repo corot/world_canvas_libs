@@ -258,38 +258,6 @@ bool AnnotationCollection::publish(const std::string& topic_name, bool by_server
     return false;
   }
 }
-//  else
-//  {
-//    // Advertise a topic to publish retrieved annotations data
-//    topic_class = roslib.message.get_message_class(common_tt)
-//    if topic_class is None:
-//      # This happens if the topic type is wrong or not known (i.e. absent from ROS_PACKAGE_PATH)
-//      ROS_ERROR("Topic type %s definition not found" % common_tt)
-//      return False
-//  }
-//
-//  ros::NodeHandle nh;
-//  ros::Publisher pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
-//
-//      objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
-//
-//      # Process retrieved data to build annotations lists
-//      objects_list = list()
-//
-//      for d in this->annots_data:
-//          object = pickle.loads(d.data)
-//          objects_list.append(object)
-//
-//      # Publish resulting list
-//      if as_list:
-//          objects_pub.publish(objects_list)
-//      else:
-//          # if as_list is false, publish objects one by one
-//          for object in objects_list:
-//              objects_pub.publish(object)
-//
-//  return True
-//}
 
 std::vector<UniqueIDmsg> AnnotationCollection::getAnnotationIDs()
 {

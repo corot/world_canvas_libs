@@ -8,10 +8,14 @@
 #ifndef ANNOTATION_COLLECTION_HPP_
 #define ANNOTATION_COLLECTION_HPP_
 
+#include <ros/serialization.h>
+#include <ros/serialized_message.h>
+
 #include <world_canvas_msgs/Annotation.h>
 #include <world_canvas_msgs/AnnotationData.h>
 
 #include "world_canvas_client_cpp/filter_criteria.hpp"
+
 
 /**
  * Manages a collection of annotations and its associated data, initially empty.
@@ -103,6 +107,68 @@ public:
    * @returns Vector of unique IDs.
    */
   std::vector<UniqueIDmsg> getAnnotationIDs();
+
+  /**
+   * Return the current annotations collection.
+   *
+   * @returns Vector of annotations.
+   */
+  const std::vector<world_canvas_msgs::Annotation>& getAnnotations() { return annotations; }
+
+  /**
+   * Return the data for annotations of the given type.
+   *
+   * @param type Get data for annotations of thus type.
+   * @param data Vector of annotations data.
+   */
+  template <typename T>
+  unsigned int getData(const std::string& type, std::vector<T>& data)
+  {
+    unsigned int count = 0;
+
+    for (unsigned int i = 0; i < annots_data.size(); ++i)
+    {
+      // Check id this data corresponds to an annotation of the requested type
+      // Would be great to avoid this param, as is implicit in the template type, but I found no way
+      // to A) get type string from the type B) make deserialize discriminate messages of other types
+      // TODO my god!!! do this smarter!!! we should already contain anns + data as a list of tuples!
+      bool right_type = false;
+      for (unsigned int j = 0; j < annotations.size(); ++j)
+      {
+        if ((annotations[j].data_id.uuid == annots_data[i].id.uuid) && (annotations[j].type == type))
+        {
+          right_type = true;
+          break;
+        }
+      }
+
+      if (! right_type)
+        continue;
+
+      // Deserialize the ROS message contained on data field; we must clone the serialized data
+      // because SerializedMessage requires a boost::shared_array as input that will try to destroy
+      // the underlying array once out of scope. Also we must skip 4 bytes on message_start pointer
+      // because the first 4 bytes on the buffer contains the (already known) serialized data size.
+      T object;
+      uint32_t serial_size = annots_data[i].data.size();
+      boost::shared_array<uint8_t> buffer(new uint8_t[serial_size]);
+      memcpy(buffer.get(), &annots_data[i].data[0], serial_size);
+      ros::SerializedMessage sm(buffer, serial_size);
+      sm.type_info = &typeid(object);
+      sm.message_start += 4;
+      try
+      {
+        ros::serialization::deserializeMessage(sm, object);
+        data.push_back(object);
+        count++;
+      }
+      catch (ros::serialization::StreamOverrunException& e)
+      {
+        ROS_ERROR("Deserialization failed on object %d: %s", i, e.what());
+      }
+    }
+    return count;
+  }
 };
 
 #endif /* ANNOTATION_COLLECTION_HPP_ */
