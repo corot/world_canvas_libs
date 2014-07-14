@@ -39,13 +39,13 @@ import roslib
 import copy
 import uuid
 import unique_id
-import cStringIO as StringIO
 import world_canvas_msgs.msg
 import world_canvas_msgs.srv
 
-from geometry_msgs.msg import *
 from rospy_message_converter import message_converter
 from visualization_msgs.msg import Marker, MarkerArray
+from world_canvas_utils.serialization import *
+
 
 class AnnotationCollection:
 
@@ -64,8 +64,8 @@ class AnnotationCollection:
         This class can also publish the retrieved annotations and RViz visualization
         markers, mostly for debug purposes.
         '''
-        self.annotations = None
-        self.annots_data = None
+        self.annotations = list()
+        self.annots_data = list()
         
         if world_id is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
@@ -101,7 +101,7 @@ class AnnotationCollection:
                 self.annotations = response.annotations
             else:
                 rospy.loginfo('No annotations found for map %s with the given search criteria', world_id)
-                self.annotations = None
+                self.annotations = list()
         else:
             rospy.logerr('Server reported an error: ', response.message)
 
@@ -113,7 +113,7 @@ class AnnotationCollection:
         
         Load associated data for the current annotations collection.
         '''
-        if self.annotations is None:
+        if len(self.annotations) == 0:
             rospy.logerr('No annotations retrieved. Nothing to load!')
             return False
             
@@ -130,7 +130,7 @@ class AnnotationCollection:
                 self.annots_data = response.data
             else:
                 rospy.logwarn('No data found for the %d retrieved annotations', len(self.annotations))
-                self.annots_data = None
+                self.annots_data = list()
         else:
             rospy.logerr('Server reported an error: ', response.message)
 
@@ -139,14 +139,10 @@ class AnnotationCollection:
     def getData(self, type):
         result = list()
         
-        for ad in self.annots_data: 
-            buffer = StringIO.StringIO()
-            buffer.write(ad.data)
-        
-            msg_queue = list()
+        for ad in self.annots_data:
             try:
-                rospy.msg.deserialize_messages(buffer, msg_queue, type)
-            except genpy.DeserializationError as e:
+                object = deserializeMsg(ad.data, type)
+            except SerializationError as e:
                 # rospy.logerr('Deserialization failed: %s' % str(e))
                 # TODO/WARN: this is ok, as I'm assuming that deserialize will always fail with messages of
                 # different types, so I use it as filter. It works by now BUT I'm not 100% sure about that!
@@ -154,11 +150,8 @@ class AnnotationCollection:
                 # it, make a version of this method with default param type=None and use annotation.type to
                 # deserialize each object
                 continue
-            if len(msg_queue) > 0:
-                result.append(msg_queue.pop())
-            if len(msg_queue) > 0:
-                # This should be impossible
-                rospy.logwarn('More than one object deserialized (%d)!' % len(msg_queue) + 1)
+
+            result.append(object)
 
         return result;
 
@@ -169,7 +162,7 @@ class AnnotationCollection:
         
         Publish RViz visualization markers for the current collection of annotations.
         '''
-        if self.annotations is None:
+        if len(self.annotations) == 0:
             rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
             
@@ -213,7 +206,7 @@ class AnnotationCollection:
         As we use just one topic, all annotations must be of the same type (function will return
         with error otherwise).
         '''
-        if self.annotations is None:
+        if len(self.annotations) == 0:
             rospy.logerr('No annotations retrieved. Nothing to publish!')
             return False
 
