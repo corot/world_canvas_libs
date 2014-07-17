@@ -116,15 +116,15 @@ public:
   const std::vector<world_canvas_msgs::Annotation>& getAnnotations() { return annotations; }
 
   /**
-   * Return the data for annotations of the given type.
+   * Return the data for annotations of the template type.
    *
-   * @param type Get data for annotations of thus type.
    * @param data Vector of annotations data.
    */
   template <typename T>
-  unsigned int getData(const std::string& type, std::vector<T>& data)
+  unsigned int getData(std::vector<T>& data)
   {
     unsigned int count = 0;
+    std::string type = ros::message_traits::DataType<T>::value();
 
     for (unsigned int i = 0; i < annots_data.size(); ++i)
     {
@@ -133,6 +133,7 @@ public:
       // to A) get type string from the type B) make deserialize discriminate messages of other types
       // TODO my god!!! do this smarter!!! we should already contain anns + data as a list of tuples!
       bool right_type = false;
+
       for (unsigned int j = 0; j < annotations.size(); ++j)
       {
         if ((annotations[j].data_id.uuid == annots_data[i].id.uuid) && (annotations[j].type == type))
@@ -158,6 +159,12 @@ public:
       sm.message_start += 4;
       try
       {
+        ROS_DEBUG("Deserialize object %x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x of type %s",
+                 annots_data[i].id.uuid[0], annots_data[i].id.uuid[1], annots_data[i].id.uuid[2], annots_data[i].id.uuid[3],
+                 annots_data[i].id.uuid[4], annots_data[i].id.uuid[5], annots_data[i].id.uuid[6], annots_data[i].id.uuid[7],
+                 annots_data[i].id.uuid[8], annots_data[i].id.uuid[9], annots_data[i].id.uuid[10], annots_data[i].id.uuid[11],
+                 annots_data[i].id.uuid[12], annots_data[i].id.uuid[13], annots_data[i].id.uuid[14], annots_data[i].id.uuid[15],
+                 type.c_str());
         ros::serialization::deserializeMessage(sm, object);
         data.push_back(object);
         count++;

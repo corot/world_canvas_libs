@@ -60,11 +60,9 @@ int main(int argc, char** argv)
   std::vector<yocs_msgs::Column> columns;
   std::vector<nav_msgs::OccupancyGrid> maps;
 
-  ROS_INFO("Done    %u   %u   %u",
-           ac.getData("yocs_msgs/Wall", walls),
-           ac.getData("yocs_msgs/Column", columns),
-           ac.getData("nav_msgs/OccupancyGrid", maps));
-  ROS_INFO("Done    %lu   %lu   %lu", walls.size(), columns.size(), maps.size());
+  ROS_INFO("Done!  got %u walls, %u columns and %u maps",
+           ac.getData(walls), ac.getData(columns), ac.getData(maps));
+  ROS_INFO("(for confirmation    %lu   %lu   %lu)", walls.size(), columns.size(), maps.size());
   ros::Publisher wp = nh.advertise<yocs_msgs::Wall> ("walls_on_client", 1, true);
   ros::Publisher cp = nh.advertise<yocs_msgs::Column> ("columns_on_client", 1, true);
   ros::Publisher mp = nh.advertise<nav_msgs::OccupancyGrid> ("maps_on_client", 1, true);
