@@ -21,15 +21,13 @@
   <build_depend>nav_msgs</build_depend>
   <build_depend>yocs_msgs</build_depend>
   <build_depend>world_canvas_msgs</build_depend>
-  <build_depend>world_canvas_msgs</build_depend>
-  <!-- <build_depend>world_canvas_client_cpp</build_depend> -->
+  <build_depend>world_canvas_client_cpp</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>unique_id</run_depend>
   <run_depend>uuid_msgs</run_depend>
   <run_depend>nav_msgs</run_depend>
   <run_depend>yocs_msgs</run_depend>
-  <run_depend>world_canvas_msgs</run_depend>
   <run_depend>world_canvas_msgs</run_depend>
   <run_depend>world_canvas_client_cpp</run_depend>
   <run_depend>world_canvas_client_py</run_depend>
