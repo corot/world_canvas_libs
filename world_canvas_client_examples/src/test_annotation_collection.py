@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import roslib; roslib.load_manifest('world_canvas_client_py')
 import rospy
 
 import world_canvas_client
