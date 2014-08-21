@@ -49,14 +49,14 @@ from world_canvas_utils.serialization import *
 
 class AnnotationCollection:
 
-    def __init__(self, world=None, id=[], name=[], type=[], keyword=[], related=[]):
+    def __init__(self, world=None, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
-        @param world:   Annotations in this collection belong to this world
-        @param id:      Filter annotations by their uuid
-        @param name:    Filter annotations by their name
-        @param type:    Filter annotations by their type
-        @param keyword: Filter annotations by their keywords
-        @param related: Filter annotations by their relationships
+        @param world:         Annotations in this collection belong to this world
+        @param uuids:         Filter annotations by their uuid
+        @param names:         Filter annotations by their name
+        @param types:         Filter annotations by their type
+        @param keywords:      Filter annotations by their keywords
+        @param relationships: Filter annotations by their relationships
 
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
@@ -69,18 +69,18 @@ class AnnotationCollection:
         
         if world is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
-            self.filterBy(world, id, name, type, keyword, related)
+            self.filterBy(world, uuids, names, types, keywords, relationships)
             
         return
     
-    def filterBy(self, world, id=[], name=[], type=[], keyword=[], related=[]):
+    def filterBy(self, world, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
-        @param world:   Annotations in this collection belong to this world
-        @param id:      Filter annotations by their uuid
-        @param name:    Filter annotations by their name
-        @param type:    Filter annotations by their type
-        @param keyword: Filter annotations by their keywords
-        @param related: Filter annotations by their relationships
+        @param world:         Annotations in this collection belong to this world
+        @param uuids:         Filter annotations by their uuid
+        @param names:         Filter annotations by their name
+        @param types:         Filter annotations by their type
+        @param keywords:      Filter annotations by their keywords
+        @param relationships: Filter annotations by their relationships
         @returns True on success, False otherwise.
         
         Reload annotations collection, filtered by new selection criteria.
@@ -91,9 +91,9 @@ class AnnotationCollection:
         rospy.loginfo('Getting annotations for world %s and additional filter criteria', world)
         get_anns_srv = rospy.ServiceProxy('get_annotations', world_canvas_msgs.srv.GetAnnotations)
         response = get_anns_srv(world,
-                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + annot_id)) for annot_id in id],
-                                name, type, keyword,
-                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + relat_id)) for relat_id in related])
+                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in uuids],
+                                names, types, keywords,
+                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in relationships])
 
         if response.result:
             if len(response.annotations) > 0:

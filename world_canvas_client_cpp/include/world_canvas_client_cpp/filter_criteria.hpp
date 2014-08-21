@@ -41,11 +41,11 @@ public:
   /**
    * Creates a filter criteria set at one blow.
    *
-   * @param id:       Filter annotations by their uuid
-   * @param name:     Filter annotations by their name
-   * @param type:     Filter annotations by their type
-   * @param keyword:  Filter annotations by their keywords
-   * @param related:  Filter annotations by their relationships
+   * @param uuids:         Filter annotations by their uuid
+   * @param names:         Filter annotations by their name
+   * @param types:         Filter annotations by their type
+   * @param keywords:      Filter annotations by their keywords
+   * @param relationships: Filter annotations by their relationships
    */
   FilterCriteria(const std::string & world,
                  const std::vector<std::string>& uuids,

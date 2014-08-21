@@ -28,7 +28,7 @@ int main(int argc, char** argv)
   std::string default_tt;
   std::string default_wn("INVALID_WORLD");
   bool        pub_as_list;
-  std::vector<std::string> ids;
+  std::vector<std::string> uuids;
   std::vector<std::string> names;
   std::vector<std::string> types;
   std::vector<std::string> keywords;
@@ -38,14 +38,14 @@ int main(int argc, char** argv)
   nh.param("topic_name",    topic_name, default_tn);
   nh.param("topic_type",    topic_type, default_tt);
   nh.param("pub_as_list",   pub_as_list, false);
-  nh.param("ids",           ids, ids);
+  nh.param("uuids",         uuids, uuids);
   nh.param("names",         names, names);
   nh.param("types",         types, types);
   nh.param("keywords",      keywords, keywords);
   nh.param("relationships", relationships, relationships);
 
   // Prepare the annotation collection
-  FilterCriteria filter(world_name, ids, names, types, keywords, relationships);
+  FilterCriteria filter(world_name, uuids, names, types, keywords, relationships);
   AnnotationCollection ac(filter);
   ac.loadData();
   ROS_INFO("Annotation collection ready!");
