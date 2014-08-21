@@ -15,8 +15,8 @@
 #include "world_canvas_client_cpp/annotation_collection.hpp"
 
 
-AnnotationCollection::AnnotationCollection(const std::string& world_id)
-  : filter(FilterCriteria(world_id))
+AnnotationCollection::AnnotationCollection(const std::string& world)
+  : filter(FilterCriteria(world))
 {
 }
 
@@ -43,9 +43,9 @@ bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
   }
 
   ROS_INFO("Getting annotations for world %s and additional filter criteria",
-           this->filter.getWorldName().c_str());
+           this->filter.getWorld().c_str());
   world_canvas_msgs::GetAnnotations srv;
-  srv.request.world_id      = this->filter.getWorldId();
+  srv.request.world         = this->filter.getWorld();
   srv.request.ids           = this->filter.getUuids();
   srv.request.names         = this->filter.getNames();
   srv.request.types         = this->filter.getTypes();
@@ -62,7 +62,7 @@ bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
       else
       {
         ROS_INFO("No annotations found for world %s with the given search criteria",
-                 this->filter.getWorldName().c_str());
+                 this->filter.getWorld().c_str());
       }
       this->annotations = srv.response.annotations;
       return true;
@@ -78,12 +78,6 @@ bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
     ROS_ERROR("Failed to call get_annotations service");
     return false;
   }
-
-
-//  get_anns_srv = rospy.ServiceProxy('get_annotations', world_canvas_msgs.srv.GetAnnotations)
-//  response = get_anns_srv(unique_id.toMsg(uuid.UUID('urn:uuid:' + world_id)),
-//                         [unique_id.toMsg(uuid.UUID('urn:uuid:' + annot_id)) for annot_id in id],
-//                          name, type, keyword, [], [], [], related)  # 3 filters unimplemented
 }
 
 AnnotationCollection::~AnnotationCollection()

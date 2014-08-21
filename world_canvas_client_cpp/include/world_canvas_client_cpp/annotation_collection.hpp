@@ -48,15 +48,15 @@ public:
   /**
    * Initializes the collection of annotations and associated data, initially empty.
    *
-   * @param world_id: Annotations in this collection belong to this world.
+   * @param world: Annotations in this collection belong to this world.
    */
-  AnnotationCollection(const std::string& world_id);
+  AnnotationCollection(const std::string& world);
 
   /**
    * Initializes the collection of annotations and associated data, initially empty.
    *
    * @param criteria: Annotations filter criteria to pass to the server (must contain
-   * at least a valid world_id uuid).
+   * at least a valid world name).
    */
   AnnotationCollection(const FilterCriteria& criteria);
 

@@ -17,19 +17,15 @@ typedef uuid_msgs::UniqueID UniqueIDmsg;
 
 /**
  * Annotations filter criteria to pass to the world canvas server. The only
- * mandatory criteria is the world_id.
+ * mandatory criteria is the world name.
  * Empty vectors are ignored; the non-empty are concatenated with logic ANDs.
  * Within the lists, elements are concatenated with logic ORs, so for example
  * an annotation only needs to contain one of the keywords to be retrieved.
- *
- * TODO: world_name is by now a hex string of the uuid; we must implement a
- * friendly world naming system.
  */
 class FilterCriteria
 {
 private:
-  UniqueIDmsg              world_id;
-  std::string              world_name;
+  std::string              world;
   std::vector<UniqueIDmsg> uuids;
   std::vector<std::string> names;
   std::vector<std::string> types;
@@ -40,7 +36,7 @@ public:
   /**
    * Creates an empty filter criteria set.
    */
-  FilterCriteria(const std::string& world_id);
+  FilterCriteria(const std::string& world);
 
   /**
    * Creates a filter criteria set at one blow.
@@ -51,7 +47,7 @@ public:
    * @param keyword:  Filter annotations by their keywords
    * @param related:  Filter annotations by their relationships
    */
-  FilterCriteria(const std::string & world_id,
+  FilterCriteria(const std::string & world,
                  const std::vector<std::string>& uuids,
                  const std::vector<std::string>& names,
                  const std::vector<std::string>& types,
@@ -62,15 +58,14 @@ public:
 
   bool nullFilter();
 
-  void setWorldId(const std::string& world_id);
+  void setWorld(const std::string& world);
   void setUuids(const std::vector<std::string>& uuids);
   void setNames(const std::vector<std::string>& names);
   void setTypes(const std::vector<std::string>& types);
   void setKeywords(const std::vector<std::string>& keywords);
   void setRelationships(const std::vector<std::string>& relationships);
 
-  UniqueIDmsg getWorldId() const { return world_id; }
-  std::string getWorldName() const { return world_name; }
+              std::string  getWorld() const { return world; }
   std::vector<UniqueIDmsg> getUuids() const { return uuids; }
   std::vector<std::string> getNames() const { return names; }
   std::vector<std::string> getTypes() const { return types; }

@@ -21,12 +21,12 @@ int main(int argc, char** argv)
   // Parameters
   ros::NodeHandle nh("~");
 
-  std::string world_id;
+  std::string world_name;
   std::string topic_name;
   std::string topic_type;
   std::string default_tn("annotations");
   std::string default_tt;
-  std::string default_wi("INVALID_UUID");
+  std::string default_wn("INVALID_WORLD");
   bool        pub_as_list;
   std::vector<std::string> ids;
   std::vector<std::string> names;
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   std::vector<std::string> keywords;
   std::vector<std::string> relationships;
 
-  nh.param("world_id",      world_id, default_wi);
+  nh.param("world",         world_name, default_wn);
   nh.param("topic_name",    topic_name, default_tn);
   nh.param("topic_type",    topic_type, default_tt);
   nh.param("pub_as_list",   pub_as_list, false);
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
   nh.param("relationships", relationships, relationships);
 
   // Prepare the annotation collection
-  FilterCriteria filter(world_id, ids, names, types, keywords, relationships);
+  FilterCriteria filter(world_name, ids, names, types, keywords, relationships);
   AnnotationCollection ac(filter);
   ac.loadData();
   ROS_INFO("Annotation collection ready!");

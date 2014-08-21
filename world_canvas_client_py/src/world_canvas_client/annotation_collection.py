@@ -49,14 +49,14 @@ from world_canvas_utils.serialization import *
 
 class AnnotationCollection:
 
-    def __init__(self, world_id=None, id=[], name=[], type=[], keyword=[], related=[]):
+    def __init__(self, world=None, id=[], name=[], type=[], keyword=[], related=[]):
         '''
-        @param world_id: Annotations in this collection belong to this world
-        @param id:       Filter annotations by their uuid
-        @param name:     Filter annotations by their name
-        @param type:     Filter annotations by their type
-        @param keyword:  Filter annotations by their keywords
-        @param related:  Filter annotations by their relationships
+        @param world:   Annotations in this collection belong to this world
+        @param id:      Filter annotations by their uuid
+        @param name:    Filter annotations by their name
+        @param type:    Filter annotations by their type
+        @param keyword: Filter annotations by their keywords
+        @param related: Filter annotations by their relationships
 
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
@@ -67,20 +67,20 @@ class AnnotationCollection:
         self.annotations = list()
         self.annots_data = list()
         
-        if world_id is not None:
+        if world is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
-            self.filterBy(world_id, id, name, type, keyword, related)
+            self.filterBy(world, id, name, type, keyword, related)
             
         return
     
-    def filterBy(self, world_id, id=[], name=[], type=[], keyword=[], related=[]):
+    def filterBy(self, world, id=[], name=[], type=[], keyword=[], related=[]):
         '''
-        @param world_id: Annotations in this collection belong to this world
-        @param id:       Filter annotations by their uuid
-        @param name:     Filter annotations by their name
-        @param type:     Filter annotations by their type
-        @param keyword:  Filter annotations by their keywords
-        @param related:  Filter annotations by their relationships
+        @param world:   Annotations in this collection belong to this world
+        @param id:      Filter annotations by their uuid
+        @param name:    Filter annotations by their name
+        @param type:    Filter annotations by their type
+        @param keyword: Filter annotations by their keywords
+        @param related: Filter annotations by their relationships
         @returns True on success, False otherwise.
         
         Reload annotations collection, filtered by new selection criteria.
@@ -88,9 +88,9 @@ class AnnotationCollection:
         rospy.loginfo("Waiting for get_annotations service...")
         rospy.wait_for_service('get_annotations')
     
-        rospy.loginfo('Getting annotations with map uuid %s and additional filter criteria', world_id)
+        rospy.loginfo('Getting annotations for world %s and additional filter criteria', world)
         get_anns_srv = rospy.ServiceProxy('get_annotations', world_canvas_msgs.srv.GetAnnotations)
-        response = get_anns_srv(unique_id.toMsg(uuid.UUID('urn:uuid:' + world_id)),
+        response = get_anns_srv(world,
                                [unique_id.toMsg(uuid.UUID('urn:uuid:' + annot_id)) for annot_id in id],
                                 name, type, keyword,
                                [unique_id.toMsg(uuid.UUID('urn:uuid:' + relat_id)) for relat_id in related])
@@ -100,7 +100,7 @@ class AnnotationCollection:
                 rospy.loginfo('%d annotations found', len(response.annotations))
                 self.annotations = response.annotations
             else:
-                rospy.loginfo('No annotations found for map %s with the given search criteria', world_id)
+                rospy.loginfo('No annotations found for world %s with the given search criteria', world)
                 self.annotations = list()
         else:
             rospy.logerr('Server reported an error: ', response.message)

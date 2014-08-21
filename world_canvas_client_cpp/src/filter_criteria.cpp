@@ -9,19 +9,19 @@
 
 #include "world_canvas_client_cpp/filter_criteria.hpp"
 
-FilterCriteria::FilterCriteria(const std::string & world_id)
+FilterCriteria::FilterCriteria(const std::string & world)
 {
-  this->setWorldId(world_id);
+  this->setWorld(world);
 }
 
-FilterCriteria::FilterCriteria(const std::string & world_id,
+FilterCriteria::FilterCriteria(const             std::string & world,
                                const std::vector<std::string>& uuids,
                                const std::vector<std::string>& names,
                                const std::vector<std::string>& types,
                                const std::vector<std::string>& keywords,
                                const std::vector<std::string>& relationships)
 {
-  this->setWorldId(world_id);
+  this->setWorld(world);
   this->setUuids(uuids);
   this->setNames(names);
   this->setTypes(types);
@@ -39,10 +39,9 @@ bool FilterCriteria::nullFilter()
       == keywords.size() == relationships.size() == 0;
 }
 
-void FilterCriteria::setWorldId(const std::string& world_id)
+void FilterCriteria::setWorld(const std::string& world)
 {
-  this->world_name = world_id;
-  this->world_id = unique_id::toMsg(unique_id::fromHexString(world_id));
+  this->world = world;
 }
 
 void FilterCriteria::setUuids(const std::vector<std::string>& uuids)
