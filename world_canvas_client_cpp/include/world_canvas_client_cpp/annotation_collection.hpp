@@ -128,22 +128,9 @@ public:
 
     for (unsigned int i = 0; i < annots_data.size(); ++i)
     {
-      // Check id this data corresponds to an annotation of the requested type
-      // Would be great to avoid this param, as is implicit in the template type, but I found no way
-      // to A) get type string from the type B) make deserialize discriminate messages of other types
-      // TODO my god!!! do this smarter!!! we should already contain anns + data as a list of tuples!
-      bool right_type = false;
-
-      for (unsigned int j = 0; j < annotations.size(); ++j)
-      {
-        if ((annotations[j].data_id.uuid == annots_data[i].id.uuid) && (annotations[j].type == type))
-        {
-          right_type = true;
-          break;
-        }
-      }
-
-      if (! right_type)
+      // Check id this data corresponds to an annotation of the requested type. TODO: but we should
+      // a list of tuples containing anns + data, so we don't need to relay on data.type
+      if (annots_data[i].type != type)
         continue;
 
       // Deserialize the ROS message contained on data field; we must clone the serialized data
