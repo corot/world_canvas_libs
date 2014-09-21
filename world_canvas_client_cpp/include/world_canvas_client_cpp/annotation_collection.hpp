@@ -26,7 +26,7 @@
  */
 class AnnotationCollection
 {
-private:
+protected:
   ros::NodeHandle nh;
   ros::Publisher markers_pub;
 
@@ -69,6 +69,13 @@ public:
    * @returns True on success, False otherwise.
    */
   bool filterBy(const FilterCriteria& criteria);
+
+  /**
+   * Load annotations collection, filtered by current selection criteria.
+   *
+   * @returns True on success, False otherwise.
+   */
+  bool load();
 
   /**
    * Load associated data for the current annotations collection.

@@ -27,6 +27,11 @@ AnnotationCollection::AnnotationCollection(const FilterCriteria& criteria)
   this->filterBy(criteria);
 }
 
+AnnotationCollection::~AnnotationCollection()
+{
+}
+
+
 bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
 {
   this->filter = criteria;
@@ -80,10 +85,11 @@ bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
   }
 }
 
-AnnotationCollection::~AnnotationCollection()
+bool AnnotationCollection::load()
 {
+  // Retrieve annotations with current filter parameters
+  return this->filterBy(this->filter);
 }
-
 
 bool AnnotationCollection::loadData()
 {
