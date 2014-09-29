@@ -9,11 +9,14 @@
 #include <world_canvas_msgs/GetAnnotations.h>
 #include <world_canvas_msgs/GetAnnotationsData.h>
 #include <world_canvas_msgs/PubAnnotationsData.h>
-#include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include "world_canvas_client_cpp/unique_id.hpp"
 #include "world_canvas_client_cpp/annotation_collection.hpp"
 
+
+namespace wcf
+{
 
 AnnotationCollection::AnnotationCollection(const std::string& world)
   : filter(FilterCriteria(world))
@@ -158,22 +161,60 @@ bool AnnotationCollection::publishMarkers(const std::string& topic)
   visualization_msgs::MarkerArray markers_array;
   for (unsigned int i = 0; i < this->annotations.size(); i++)
   {
-    visualization_msgs::Marker marker;
-    marker.id     = i;
-    marker.header = annotations[i].pose.header;
-    marker.type   = annotations[i].shape;
-    marker.ns     = annotations[i].type;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose   = annotations[i].pose.pose.pose;
-    marker.scale  = annotations[i].size;
-    marker.color  = annotations[i].color;
-
-    markers_array.markers.push_back(marker);
+    markers_array.markers.push_back(makeMarker(i, this->annotations[i]));
+    markers_array.markers.push_back(makeLabel(markers_array.markers.back()));
   }
 
   markers_pub.publish(markers_array);
   return true;
 }
+
+bool AnnotationCollection::publishMarker(const std::string& topic, int marker_id,
+                                         const world_canvas_msgs::Annotation& ann)
+{
+  // Advertise a topic to publish a visual marker for the given annotation
+  markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+
+  visualization_msgs::MarkerArray markers_array;
+
+  markers_array.markers.push_back(makeMarker(marker_id, ann));
+  markers_array.markers.push_back(makeLabel(markers_array.markers.back()));
+
+  markers_pub.publish(markers_array);
+  return true;
+}
+
+visualization_msgs::Marker AnnotationCollection::makeMarker(int id, const world_canvas_msgs::Annotation& ann)
+{
+  std::stringstream name; name << ann.name << "  [" << ann.type << "]";
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = ann.pose.header.frame_id;
+  marker.header.stamp = ros::Time::now();
+  marker.scale = ann.size;
+  marker.color = ann.color;
+  marker.ns = name.str();
+  marker.id = id;
+  marker.pose = ann.pose.pose.pose;
+  marker.type = ann.shape;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  return marker;
+}
+
+visualization_msgs::Marker AnnotationCollection::makeLabel(const visualization_msgs::Marker& marker)
+{
+  visualization_msgs::Marker label = marker;
+  label.id = marker.id + 1000000;  // marker id must be unique
+  label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+  label.pose.position.z = marker.pose.position.z + marker.scale.z/2.0 + 0.1; // just above the visual
+  label.text = marker.ns;
+  label.scale.x = label.scale.y = label.scale.z = 0.12;
+  label.color = marker.color;
+
+  return label;
+}
+
 
 bool AnnotationCollection::publish(const std::string& topic_name, bool by_server, bool as_list,
                                    const std::string& topic_type)
@@ -259,6 +300,29 @@ bool AnnotationCollection::publish(const std::string& topic_name, bool by_server
   }
 }
 
+const world_canvas_msgs::Annotation& AnnotationCollection::getAnnotation(const UniqueIDmsg& id)
+{
+  for (unsigned int i = 0; i < annotations.size(); i++)
+  {
+    if (annotations[i].id.uuid == id.uuid)
+      return annotations[i];
+  }
+  throw ros::Exception("Uuid not found: " + uuid::toHexString(id));
+}
+
+std::vector<world_canvas_msgs::Annotation>
+AnnotationCollection::getAnnotations(const std::string& name)
+{
+  std::vector<world_canvas_msgs::Annotation> result;
+  for (unsigned int i = 0; i < annotations.size(); i++)
+  {
+    if (annotations[i].name == name){
+      result.push_back(annotations[i]);ROS_DEBUG("%s  IN  %s", uuid::toHexString(annotations[i].id).c_str(), annotations[i].name.c_str());
+    }else ROS_DEBUG("%d  %s  NOOOOO  %s", annotations.size(), uuid::toHexString(annotations[i].id).c_str(), annotations[i].name.c_str());
+  }
+  return result;
+}
+
 std::vector<UniqueIDmsg> AnnotationCollection::getAnnotationIDs()
 {
   std::vector<UniqueIDmsg> uuids(annotations.size());
@@ -278,3 +342,5 @@ std::vector<UniqueIDmsg> AnnotationCollection::getAnnotsDataIDs()
   }
   return uuids;
 }
+
+} // namespace wcf

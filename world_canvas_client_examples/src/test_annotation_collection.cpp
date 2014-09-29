@@ -45,8 +45,8 @@ int main(int argc, char** argv)
   nh.param("relationships", relationships, relationships);
 
   // Prepare the annotation collection
-  FilterCriteria filter(world_name, uuids, names, types, keywords, relationships);
-  AnnotationCollection ac(filter);
+  wcf::FilterCriteria filter(world_name, uuids, names, types, keywords, relationships);
+  wcf::AnnotationCollection ac(filter);
   ac.loadData();
   ROS_INFO("Annotation collection ready!");
 

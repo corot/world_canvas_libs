@@ -5,9 +5,11 @@
  *      Author: jorge
  */
 
-#include <unique_id/unique_id.h>
-
+#include "world_canvas_client_cpp/unique_id.hpp"
 #include "world_canvas_client_cpp/filter_criteria.hpp"
+
+namespace wcf
+{
 
 FilterCriteria::FilterCriteria(const std::string & world)
 {
@@ -48,7 +50,7 @@ void FilterCriteria::setUuids(const std::vector<std::string>& uuids)
 {
   this->uuids.clear();
   for (unsigned int i = 0; i < uuids.size(); i++)
-    this->uuids.push_back(unique_id::toMsg(unique_id::fromHexString(uuids[i])));
+    this->uuids.push_back(wcf::uuid::toMsg(wcf::uuid::fromHexString(uuids[i])));
 }
 
 void FilterCriteria::setNames(const std::vector<std::string>& names)
@@ -70,5 +72,7 @@ void FilterCriteria::setRelationships(const std::vector<std::string>& relationsh
 {
   this->relationships.clear();
   for (unsigned int i = 0; i < relationships.size(); i++)
-    this->relationships.push_back(unique_id::toMsg(unique_id::fromHexString(relationships[i])));
+    this->relationships.push_back(wcf::uuid::toMsg(wcf::uuid::fromHexString(relationships[i])));
 }
+
+} // namespace wcf

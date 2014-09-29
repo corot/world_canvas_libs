@@ -11,11 +11,15 @@
 #include <ros/serialization.h>
 #include <ros/serialized_message.h>
 
+#include <visualization_msgs/Marker.h>
+
 #include <world_canvas_msgs/Annotation.h>
 #include <world_canvas_msgs/AnnotationData.h>
 
 #include "world_canvas_client_cpp/filter_criteria.hpp"
 
+namespace wcf
+{
 
 /**
  * Manages a collection of annotations and its associated data, initially empty.
@@ -93,6 +97,34 @@ public:
   bool publishMarkers(const std::string& topic);
 
   /**
+   * Publish RViz visualization marker for the given annotation.
+   *
+   * @param topic  Where we must publish annotation marker.
+   * @param marker_id Id to add to the visual marker
+   * @param ann Annotation to publish a marker for
+   * @returns True on success, False otherwise.
+   */
+  bool publishMarker(const std::string& topic, int marker_id,
+                     const world_canvas_msgs::Annotation& ann);
+
+  /**
+   * Create a RViz visualization marker for the given annotation.
+   *
+   * @param id Id to add to the visual marker
+   * @param ann Annotation to create a marker for
+   * @returns The created marker.
+   */
+  visualization_msgs::Marker makeMarker(int id, const world_canvas_msgs::Annotation& ann);
+
+  /**
+   * Create a RViz visualization marker to add a label above the given marker.
+   *
+   * @param marker Marker to create a label for
+   * @returns The created marker.
+   */
+  visualization_msgs::Marker makeLabel(const visualization_msgs::Marker& marker);
+
+  /**
    * Publish the current collection of annotations, by this client or by the server.
    * As we use just one topic, all annotations must be of the same type (function will
    * return with error otherwise).
@@ -107,6 +139,23 @@ public:
    */
   bool publish(const std::string& topic_name, bool by_server = false, bool as_list = false,
                const std::string& topic_type = "");
+
+  /**
+   * Return the annotation with the given unique id.
+   *
+   * @param id Target annotation id
+   * @returns Searched annotation.
+   */
+  const world_canvas_msgs::Annotation& getAnnotation(const UniqueIDmsg& id);
+
+  /**
+   * Return the annotations with the given name. Can be more than one, as we don't enforce
+   * uniqueness on annotation names.
+   *
+   * @param name Target annotations name
+   * @returns Searched annotations.
+   */
+  std::vector<world_canvas_msgs::Annotation> getAnnotations(const std::string& name);
 
   /**
    * Return unique IDs for the current annotations collection.
@@ -171,5 +220,7 @@ public:
     return count;
   }
 };
+
+} // namespace wcf
 
 #endif /* ANNOTATION_COLLECTION_HPP_ */

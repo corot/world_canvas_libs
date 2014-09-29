@@ -15,6 +15,9 @@
 
 typedef uuid_msgs::UniqueID UniqueIDmsg;
 
+namespace wcf
+{
+
 /**
  * Annotations filter criteria to pass to the world canvas server. The only
  * mandatory criteria is the world name.
@@ -72,5 +75,7 @@ public:
   std::vector<std::string> getKeywords() const { return keywords; }
   std::vector<UniqueIDmsg> getRelationships() const { return relationships; }
 };
+
+} // namespace wcf
 
 #endif /* FILTER_CRITERIA_HPP_ */
