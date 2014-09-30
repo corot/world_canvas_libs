@@ -16,6 +16,7 @@
 #include <world_canvas_msgs/Annotation.h>
 #include <world_canvas_msgs/AnnotationData.h>
 
+#include "world_canvas_client_cpp/unique_id.hpp"
 #include "world_canvas_client_cpp/filter_criteria.hpp"
 
 namespace wcf
@@ -204,12 +205,8 @@ public:
       sm.message_start += 4;
       try
       {
-        ROS_DEBUG("Deserialize object %x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x of type %s",
-                 annots_data[i].id.uuid[0], annots_data[i].id.uuid[1], annots_data[i].id.uuid[2], annots_data[i].id.uuid[3],
-                 annots_data[i].id.uuid[4], annots_data[i].id.uuid[5], annots_data[i].id.uuid[6], annots_data[i].id.uuid[7],
-                 annots_data[i].id.uuid[8], annots_data[i].id.uuid[9], annots_data[i].id.uuid[10], annots_data[i].id.uuid[11],
-                 annots_data[i].id.uuid[12], annots_data[i].id.uuid[13], annots_data[i].id.uuid[14], annots_data[i].id.uuid[15],
-                 type.c_str());
+        ROS_DEBUG("Deserializing object '%s' of type '%s'",
+                  uuid::toHexString(annots_data[i].id).c_str(), type.c_str());
         ros::serialization::deserializeMessage(sm, object);
         data.push_back(object);
         count++;

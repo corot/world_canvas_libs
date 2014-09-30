@@ -11,7 +11,6 @@
 #include <world_canvas_msgs/PubAnnotationsData.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include "world_canvas_client_cpp/unique_id.hpp"
 #include "world_canvas_client_cpp/annotation_collection.hpp"
 
 
