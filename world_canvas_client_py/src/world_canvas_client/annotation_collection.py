@@ -49,14 +49,15 @@ from world_canvas_utils.serialization import *
 
 class AnnotationCollection:
 
-    def __init__(self, world=None, uuids=[], names=[], types=[], keywords=[], relationships=[]):
+    def __init__(self, world_namespace='', world=None, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
-        @param world:         Annotations in this collection belong to this world
-        @param uuids:         Filter annotations by their uuid
-        @param names:         Filter annotations by their name
-        @param types:         Filter annotations by their type
-        @param keywords:      Filter annotations by their keywords
-        @param relationships: Filter annotations by their relationships
+        @param world_namespace: World canvas handles can be found under this namespace
+        @param world:           Annotations in this collection belong to this world
+        @param uuids:           Filter annotations by their uuid
+        @param names:           Filter annotations by their name
+        @param types:           Filter annotations by their type
+        @param keywords:        Filter annotations by their keywords
+        @param relationships:   Filter annotations by their relationships
 
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
@@ -64,15 +65,19 @@ class AnnotationCollection:
         This class can also publish the retrieved annotations and RViz visualization
         markers, mostly for debug purposes.
         '''
+        if not world_namespace.endswith('/'):
+            self._world_namespace = world_namespace + '/'
+        else:
+            self._world_namespace = world_namespace
         self.annotations = list()
         self.annots_data = list()
-        
+
         if world is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
             self.filterBy(world, uuids, names, types, keywords, relationships)
-            
+
         return
-    
+
     def filterBy(self, world, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
         @param world:         Annotations in this collection belong to this world
@@ -82,14 +87,12 @@ class AnnotationCollection:
         @param keywords:      Filter annotations by their keywords
         @param relationships: Filter annotations by their relationships
         @returns True on success, False otherwise.
-        
+
         Reload annotations collection, filtered by new selection criteria.
         '''
-        rospy.loginfo("Waiting for get_annotations service...")
-        rospy.wait_for_service('get_annotations')
-    
         rospy.loginfo('Getting annotations for world %s and additional filter criteria', world)
-        get_anns_srv = rospy.ServiceProxy('get_annotations', world_canvas_msgs.srv.GetAnnotations)
+        get_anns_srv = self._get_service_handle('get_annotations', world_canvas_msgs.srv.GetAnnotations)
+
         response = get_anns_srv(world,
                                [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in uuids],
                                 names, types, keywords,
@@ -117,11 +120,8 @@ class AnnotationCollection:
             rospy.logerr('No annotations retrieved. Nothing to load!')
             return False
             
-        rospy.loginfo("Waiting for get_annotations_data service...")
-        rospy.wait_for_service('get_annotations_data')
-    
+        get_data_srv = self._get_service_handle('get_annotations_data', world_canvas_msgs.srv.GetAnnotationsData)
         rospy.loginfo('Loading data for the %d retrieved annotations', len(self.annotations))
-        get_data_srv = rospy.ServiceProxy('get_annotations_data', world_canvas_msgs.srv.GetAnnotationsData)
         response = get_data_srv([a.data_id for a in self.annotations])
     
         if response.result:
@@ -211,12 +211,9 @@ class AnnotationCollection:
             return False
 
         if by_server:
-            rospy.loginfo("Waiting for pub_annotations_data service...")
-            rospy.wait_for_service('pub_annotations_data')
-
             # Request server to publish the annotations previously retrieved
+            pub_data_srv = self._get_service_handle('pub_annotations_data', world_canvas_msgs.srv.PubAnnotationsData)
             rospy.loginfo('Requesting server to publish annotations')
-            pub_data_srv = rospy.ServiceProxy('pub_annotations_data', world_canvas_msgs.srv.PubAnnotationsData)
             response = pub_data_srv([a.data_id for a in self.annotations], topic_name, topic_type, as_list)
             if not response.result:
                 rospy.logerr('Server reported an error: %s' % response.message)
@@ -272,3 +269,17 @@ class AnnotationCollection:
                     objects_pub.publish(object)
         
         return True
+
+    def _get_service_handle(self, service_name, service_type):
+        '''
+        @param service_name: ros service name to get
+        @param service_type: service type
+
+        @returns: service handle
+        @rtypes: rospy.ServiceProxy
+        '''
+
+        rospy.loginfo("Waiting for %s service..."%str(service_name))
+        rospy.wait_for_service(service_name)
+        srv = rospy.ServiceProxy(self._world_namespace + service_name,  service_type)
+        return srv
