@@ -32,6 +32,7 @@ class AnnotationCollection
 {
 protected:
   ros::NodeHandle nh;
+  ros::Publisher marker_pub;
   ros::Publisher markers_pub;
 
   FilterCriteria filter;
@@ -100,18 +101,19 @@ public:
    * Publish RViz visualization marker for the given annotation.
    *
    * @param topic  Where we must publish annotation marker.
-   * @param marker_id Id to add to the visual marker
-   * @param ann Annotation to publish a marker for
+   * @param marker_id Id to add to the visual marker.
+   * @param ann Annotation to publish a marker for.
+   * @param deleteExisting Delete all markers previously published.
    * @returns True on success, False otherwise.
    */
   bool publishMarker(const std::string& topic, int marker_id,
-                     const world_canvas_msgs::Annotation& ann);
+                     const world_canvas_msgs::Annotation& ann, bool deleteExisting = true);
 
   /**
    * Create a RViz visualization marker for the given annotation.
    *
-   * @param id Id to add to the visual marker
-   * @param ann Annotation to create a marker for
+   * @param id Id to add to the visual marker.
+   * @param ann Annotation to create a marker for.
    * @returns The created marker.
    */
   visualization_msgs::Marker makeMarker(int id, const world_canvas_msgs::Annotation& ann);
@@ -119,7 +121,7 @@ public:
   /**
    * Create a RViz visualization marker to add a label above the given marker.
    *
-   * @param marker Marker to create a label for
+   * @param marker Marker to create a label for.
    * @returns The created marker.
    */
   visualization_msgs::Marker makeLabel(const visualization_msgs::Marker& marker);
@@ -143,7 +145,7 @@ public:
   /**
    * Return the annotation with the given unique id.
    *
-   * @param id Target annotation id
+   * @param id Target annotation id.
    * @returns Searched annotation.
    */
   const world_canvas_msgs::Annotation& getAnnotation(const UniqueIDmsg& id);
@@ -152,7 +154,7 @@ public:
    * Return the annotations with the given name. Can be more than one, as we don't enforce
    * uniqueness on annotation names.
    *
-   * @param name Target annotations name
+   * @param name Target annotations name.
    * @returns Searched annotations.
    */
   std::vector<world_canvas_msgs::Annotation> getAnnotations(const std::string& name);

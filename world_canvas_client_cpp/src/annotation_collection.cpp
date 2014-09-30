@@ -154,8 +154,11 @@ bool AnnotationCollection::publishMarkers(const std::string& topic)
     return false;
   }
 
-  // Advertise a topic for retrieved annotations' visualization markers
-  markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+  if (markers_pub.getTopic() != topic)
+  {
+    // Advertise a topic for retrieved annotations' visualization markers
+    markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+  }
 
   // Process retrieved data to build markers lists
   visualization_msgs::MarkerArray markers_array;
@@ -170,23 +173,39 @@ bool AnnotationCollection::publishMarkers(const std::string& topic)
 }
 
 bool AnnotationCollection::publishMarker(const std::string& topic, int marker_id,
-                                         const world_canvas_msgs::Annotation& ann)
+                                         const world_canvas_msgs::Annotation& ann,
+                                         bool deleteExisting)
 {
-  // Advertise a topic to publish a visual marker for the given annotation
-  markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+  if (marker_pub.getTopic() != topic)
+  {
+    // Advertise a topic to publish a visual marker for the given annotation
+    // Use a different publisher from the one created on publishMarkers so both can be used in parallel
+    marker_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+  }
 
   visualization_msgs::MarkerArray markers_array;
 
+  if (deleteExisting == true)
+  {
+    visualization_msgs::Marker delete_all;
+    delete_all.header = ann.pose.header;
+    delete_all.action = 3; // visualization_msgs::Marker::DELETEALL is commented but it works!
+    markers_array.markers.push_back(delete_all);
+    marker_pub.publish(markers_array);
+    ros::spinOnce();
+    markers_array.markers.clear();
+  }
+
   markers_array.markers.push_back(makeMarker(marker_id, ann));
   markers_array.markers.push_back(makeLabel(markers_array.markers.back()));
+  marker_pub.publish(markers_array);
 
-  markers_pub.publish(markers_array);
   return true;
 }
 
 visualization_msgs::Marker AnnotationCollection::makeMarker(int id, const world_canvas_msgs::Annotation& ann)
 {
-  std::stringstream name; name << ann.name << "  [" << ann.type << "]";
+  std::stringstream name; name << ann.name << " [" << ann.type << "]";
 
   visualization_msgs::Marker marker;
   marker.header.frame_id = ann.pose.header.frame_id;
@@ -208,7 +227,7 @@ visualization_msgs::Marker AnnotationCollection::makeLabel(const visualization_m
   label.id = marker.id + 1000000;  // marker id must be unique
   label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
   label.pose.position.z = marker.pose.position.z + marker.scale.z/2.0 + 0.1; // just above the visual
-  label.text = marker.ns;
+  label.text = marker.ns != " []" ? marker.ns : "";
   label.scale.x = label.scale.y = label.scale.z = 0.12;
   label.color = marker.color;
 
@@ -316,9 +335,8 @@ AnnotationCollection::getAnnotations(const std::string& name)
   std::vector<world_canvas_msgs::Annotation> result;
   for (unsigned int i = 0; i < annotations.size(); i++)
   {
-    if (annotations[i].name == name){
-      result.push_back(annotations[i]);ROS_DEBUG("%s  IN  %s", uuid::toHexString(annotations[i].id).c_str(), annotations[i].name.c_str());
-    }else ROS_DEBUG("%d  %s  NOOOOO  %s", annotations.size(), uuid::toHexString(annotations[i].id).c_str(), annotations[i].name.c_str());
+    if (annotations[i].name == name)
+      result.push_back(annotations[i]);
   }
   return result;
 }
