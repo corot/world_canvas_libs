@@ -68,7 +68,7 @@ def deserializeMsg(ser_msg, msg_class):
             raise SerializationError('Deserialization returned 0 messages')
         if len(msg_queue) > 1:
             # This should be impossible
-            rospy.logwarn('More than one object deserialized (%d)!' % len(msg_queue))
+            rospy.logwarn("More than one object deserialized (%d)!" % len(msg_queue))
         return msg_queue.pop()
     finally:
         buffer.close()

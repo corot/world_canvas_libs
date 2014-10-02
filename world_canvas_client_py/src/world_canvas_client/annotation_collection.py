@@ -90,7 +90,7 @@ class AnnotationCollection:
 
         Reload annotations collection, filtered by new selection criteria.
         '''
-        rospy.loginfo('Getting annotations for world %s and additional filter criteria', world)
+        rospy.loginfo("Getting annotations for world %s and additional filter criteria", world)
         get_anns_srv = self._get_service_handle('get_annotations', world_canvas_msgs.srv.GetAnnotations)
 
         response = get_anns_srv(world,
@@ -100,13 +100,13 @@ class AnnotationCollection:
 
         if response.result:
             if len(response.annotations) > 0:
-                rospy.loginfo('%d annotations found', len(response.annotations))
+                rospy.loginfo("%d annotations found", len(response.annotations))
                 self.annotations = response.annotations
             else:
-                rospy.loginfo('No annotations found for world %s with the given search criteria', world)
+                rospy.loginfo("No annotations found for world %s with the given search criteria", world)
                 self.annotations = list()
         else:
-            rospy.logerr('Server reported an error: ', response.message)
+            rospy.logerr("Server reported an error: ", response.message)
 
         return response.result
 
@@ -117,22 +117,22 @@ class AnnotationCollection:
         Load associated data for the current annotations collection.
         '''
         if len(self.annotations) == 0:
-            rospy.logerr('No annotations retrieved. Nothing to load!')
+            rospy.logerr("No annotations retrieved. Nothing to load!")
             return False
             
         get_data_srv = self._get_service_handle('get_annotations_data', world_canvas_msgs.srv.GetAnnotationsData)
-        rospy.loginfo('Loading data for the %d retrieved annotations', len(self.annotations))
+        rospy.loginfo("Loading data for the %d retrieved annotations", len(self.annotations))
         response = get_data_srv([a.data_id for a in self.annotations])
     
         if response.result:
             if len(response.data) > 0:
-                rospy.loginfo('%d annotations data retrieved', len(response.data))
+                rospy.loginfo("%d annotations data retrieved", len(response.data))
                 self.annots_data = response.data
             else:
-                rospy.logwarn('No data found for the %d retrieved annotations', len(self.annotations))
+                rospy.logwarn("No data found for the %d retrieved annotations", len(self.annotations))
                 self.annots_data = list()
         else:
-            rospy.logerr('Server reported an error: ', response.message)
+            rospy.logerr("Server reported an error: ", response.message)
 
         return response.result
     
@@ -143,7 +143,7 @@ class AnnotationCollection:
             try:
                 object = deserializeMsg(ad.data, type)
             except SerializationError as e:
-                # rospy.logerr('Deserialization failed: %s' % str(e))
+                # rospy.logerr("Deserialization failed: %s' % str(e))
                 # TODO/WARN: this is ok, as I'm assuming that deserialize will always fail with messages of
                 # different types, so I use it as filter. It works by now BUT I'm not 100% sure about that!
                 # The TODO is that I should organize both annotations and data in a unified list. Once I have
@@ -163,7 +163,7 @@ class AnnotationCollection:
         Publish RViz visualization markers for the current collection of annotations.
         '''
         if len(self.annotations) == 0:
-            rospy.logerr('No annotations retrieved. Nothing to publish!')
+            rospy.logerr("No annotations retrieved. Nothing to publish!")
             return False
             
         # Advertise a topic for retrieved annotations' visualization markers
@@ -207,16 +207,16 @@ class AnnotationCollection:
         with error otherwise).
         '''
         if len(self.annotations) == 0:
-            rospy.logerr('No annotations retrieved. Nothing to publish!')
+            rospy.logerr("No annotations retrieved. Nothing to publish!")
             return False
 
         if by_server:
             # Request server to publish the annotations previously retrieved
             pub_data_srv = self._get_service_handle('pub_annotations_data', world_canvas_msgs.srv.PubAnnotationsData)
-            rospy.loginfo('Requesting server to publish annotations')
+            rospy.loginfo("Requesting server to publish annotations")
             response = pub_data_srv([a.data_id for a in self.annotations], topic_name, topic_type, as_list)
             if not response.result:
-                rospy.logerr('Server reported an error: %s' % response.message)
+                rospy.logerr("Server reported an error: %s" % response.message)
             return response.result
         else:
             # Take annotations message type and verify that it's the same within the collection,
@@ -229,7 +229,7 @@ class AnnotationCollection:
                     return False
 
             if 'msg_type' not in locals():
-                rospy.logerr('Annotations message type not found? impossible! (we already checked at method start)')
+                rospy.logerr("Annotations message type not found? impossible! (we already checked at method start)")
                 return False
     
             # Keep the class of the messages to be published; we need it later when deserializing them
@@ -237,7 +237,7 @@ class AnnotationCollection:
             if msg_class is None:
                 # This could happen if the message type is wrong or not known for the server (i.e. its
                 # package is not on ROS_PACKAGE_PATH). Both cases are really weird in the client side.
-                rospy.logerr('Topic type %s definition not found' % topic_type)
+                rospy.logerr("Topic type %s definition not found" % topic_type)
                 return False
             
             # Advertise a topic with message type topic_type if we will publish results as a list (note that we
@@ -249,7 +249,7 @@ class AnnotationCollection:
                 topic_class = roslib.message.get_message_class(topic_type)
                 if topic_class is None:
                     # Same comment as in "msg_class is None" applies here
-                    rospy.logerr('Topic type %s definition not found' % topic_type)
+                    rospy.logerr("Topic type %s definition not found" % topic_type)
                     return False
             else:
                 topic_class = msg_class
@@ -279,7 +279,7 @@ class AnnotationCollection:
         @rtypes: rospy.ServiceProxy
         '''
 
-        rospy.loginfo("Waiting for %s service..."%str(service_name))
+        rospy.loginfo("Waiting for %s service..." % str(service_name))
         rospy.wait_for_service(service_name)
         srv = rospy.ServiceProxy(self._world_namespace + service_name,  service_type)
         return srv
