@@ -136,12 +136,44 @@ class AnnotationCollection:
 
         return response.result
     
-    def getData(self, type):
+    def getData(self, annotation):
+        '''
+        @returns The ROS message associated to the given annotation or None if it was not found
+        or there was an error.
+        
+        Get the associated data (ROS message) of a given annotation.
+        '''
+        for d in self.annots_data:
+            if d.id == annotation.data_id:
+                # Keep the class of the messages to be published; we need it later when deserializing them
+                msg_class = roslib.message.get_message_class(d.type)
+                if msg_class is None:
+                    # This could happen if the message type is wrong or not known for this node (i.e. its
+                    # package is not on ROS_PACKAGE_PATH). Both cases are really weird in the client side.
+                    rospy.logerr("Data type %s definition not found" % d.type)
+                    return False
+                try:
+                    object = deserializeMsg(d.data, msg_class)
+                except SerializationError as e:
+                    rospy.logerr("Deserialization failed: %s" % str(e))
+                    return None
+                
+                return object
+    
+        rospy.logwarn("Data uuid not found: " + unique_id.toHexString(annotation.data_id))
+        return None
+    
+    def getDataOfType(self, type):
+        '''
+        @returns The list of ROS messages of the given type.
+        
+        Get all associated data (ROS messages) of a given type.
+        '''
         result = list()
         
-        for ad in self.annots_data:
+        for d in self.annots_data:
             try:
-                object = deserializeMsg(ad.data, type)
+                object = deserializeMsg(d.data, type)
             except SerializationError as e:
                 # rospy.logerr("Deserialization failed: %s' % str(e))
                 # TODO/WARN: this is ok, as I'm assuming that deserialize will always fail with messages of
@@ -235,7 +267,7 @@ class AnnotationCollection:
             # Keep the class of the messages to be published; we need it later when deserializing them
             msg_class = roslib.message.get_message_class(msg_type)
             if msg_class is None:
-                # This could happen if the message type is wrong or not known for the server (i.e. its
+                # This could happen if the message type is wrong or not known for this node (i.e. its
                 # package is not on ROS_PACKAGE_PATH). Both cases are really weird in the client side.
                 rospy.logerr("Topic type %s definition not found" % topic_type)
                 return False
@@ -258,7 +290,7 @@ class AnnotationCollection:
             objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
 
             # Process retrieved data to build annotations lists
-            objects_list = self.getData(msg_class)
+            objects_list = self.getDataOfType(msg_class)
 
             # Publish resulting list
             if as_list:
@@ -269,6 +301,108 @@ class AnnotationCollection:
                     objects_pub.publish(object)
         
         return True
+
+    def add(self, annotation, msg=None, gen_uuid=True):
+        '''
+        @param annotation: The new annotation.
+        @param msg:        Its associated data. If None, we assume that we are adding an annotation to existing data.
+        @param gen_uuid:   Generate an unique id for the new annotation or use the received one.
+        @returns True on success, False otherwise.
+        
+        Add a new annotation with a new associated data or for an existing data.
+        '''
+        if gen_uuid:
+            annotation.id = unique_id.toMsg(unique_id.fromRandom())
+        else:
+            for a in self.annotations:
+                if a.id == annotation.id:
+                    rospy.logerr("Duplicated annotation with uuid '%s'", unique_id.toHexString(annotation.id))
+                    return False
+
+        if msg is None:
+            # Msg not provided, so we assume that we are adding an annotation to existing data; find it by its id
+            msg_found = False
+            for d in self.annots_data:
+                if d.id == annotation.data_id:
+                    rospy.logdebug("Annotation data with uuid '%s' found", unique_id.toHexString(annotation.data_id))
+                    msg_found = True
+                    break
+
+            if not msg_found:
+                rospy.logerr("Annotation data with uuid '%s' not found", unique_id.toHexString(annotation.data_id))
+                return False
+        else:
+            # Annotation comes with its data; create a common unique id to link both
+            annotation.data_id = unique_id.toMsg(unique_id.fromRandom())
+            annot_data = world_canvas_msgs.msg.AnnotationData()
+            annot_data.id = annotation.data_id
+            annot_data.type = annotation.type
+            annot_data.data = serializeMsg(msg)
+            
+            self.annots_data.append(annot_data)
+
+        self.annotations.append(annotation)
+        return True
+    
+    def delete(self, uuid):
+        for a in self.annotations:
+            if a.id == uuid:
+                rospy.logdebug("Annotation '%s' found", unique_id.toHexString(uuid))
+                ann_to_delete = a
+                break
+
+        if 'ann_to_delete' not in locals():
+            rospy.logwarn("Annotation '%s' not found", unique_id.toHexString(uuid))
+            return False
+
+        for d in self.annots_data:
+            if d.id == a.data_id:
+                rospy.logdebug("Annotation data '%s' found", unique_id.toHexString(d.id))
+                data_to_delete = d
+                break
+
+        if 'data_to_delete' not in locals():
+            rospy.logerr("No data found for annotation '%s' (data uuid is '%s')",
+                         unique_id.toHexString(uuid), unique_id.toHexString(ann_to_delete.data_id))
+            return False
+
+        rospy.logdebug("Removed annotation with uuid '%s'", unique_id.toHexString(ann_to_delete.id))
+        rospy.logdebug("Removed annot. data with uuid '%s'", unique_id.toHexString(data_to_delete.id))
+        self.annotations.remove(ann_to_delete)
+        self.annots_data.remove(data_to_delete)
+
+        return True
+
+    def save(self):
+        rospy.loginfo("Requesting server to save annotations")
+        annotations = []
+        annots_data = []
+        
+        # This brittle saving procedure requires parallelly ordered annotations and data vectors
+        # As this don't need to be the case, we must short them; but we need a better saving procedure (TODO)
+        for a in self.annotations:
+            for d in self.annots_data:
+                if a.data_id == d.id:
+                    rospy.logdebug("Add annotation for saving with uuid '%s'", unique_id.toHexString(a.id))
+                    rospy.logdebug("Add annot. data for saving with uuid '%s'", unique_id.toHexString(d.id))
+                    annotations.append(a)
+                    annots_data.append(d)
+                    break
+        
+        # Do at least a rudimentary check
+        if not (len(self.annotations) == len(self.annots_data) == len(annotations) == len(annots_data)):
+            rospy.logerr("Incoherent annotation and data sizes: %d != %d != %d != %d",
+                         len(self.annotations), len(self.annots_data), len(annotations), len(annots_data))
+            return False
+
+        # Request server to save current annotations list, with its data
+        save_data_srv = self._get_service_handle('save_annotations_data', world_canvas_msgs.srv.SaveAnnotationsData)
+        rospy.loginfo("Requesting server to save annotations")
+        response = save_data_srv(annotations, annots_data)
+        if not response.result:
+            rospy.logerr("Server reported an error: %s" % response.message)
+        return response.result    
+
 
     def _get_service_handle(self, service_name, service_type):
         '''
@@ -283,3 +417,4 @@ class AnnotationCollection:
         rospy.wait_for_service(service_name)
         srv = rospy.ServiceProxy(self._world_namespace + service_name,  service_type)
         return srv
+
