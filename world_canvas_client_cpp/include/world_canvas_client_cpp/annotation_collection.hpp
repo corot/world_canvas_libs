@@ -35,6 +35,7 @@ protected:
   ros::NodeHandle nh;
   ros::Publisher marker_pub;
   ros::Publisher markers_pub;
+  std::string srv_namespace;
 
   FilterCriteria filter;
 
@@ -50,21 +51,46 @@ protected:
    */
   std::vector<UniqueIDmsg> getAnnotsDataIDs();
 
+  /**
+   * Create a service client of the template type and wait until the service is available.
+   *
+   * @param service_name: ROS service name to get, without namespace.
+   * @param timeout: Timeout to wait for the service to come up.
+   * @returns: The service handle.
+   * @throws: ROS exception on timeout.
+   */
+  template <typename T>
+  ros::ServiceClient getServiceHandle(const std::string& service_name, double timeout = 5.0)
+  {
+    ros::NodeHandle nh;
+    ros::ServiceClient client = nh.serviceClient<T>(srv_namespace + service_name);
+    ROS_INFO("Waiting for '%s' service...", service_name.c_str());
+    if (client.waitForExistence(ros::Duration(timeout)) == false)
+    {
+      ROS_ERROR("'%s' service not available after %.2f s", service_name.c_str(), timeout);
+      throw ros::Exception(service_name + " service not available");
+    }
+
+    return client;
+  }
+
 public:
   /**
    * Initializes the collection of annotations and associated data, initially empty.
    *
    * @param world: Annotations in this collection belong to this world.
+   * @param srv_namespace: World canvas handles can be found under this namespace.
    */
-  AnnotationCollection(const std::string& world);
+  AnnotationCollection(const std::string& world, const std::string& srv_namespace = "");
 
   /**
    * Initializes the collection of annotations and associated data, initially empty.
    *
    * @param criteria: Annotations filter criteria to pass to the server (must contain
    * at least a valid world name).
+   * @param srv_namespace: World canvas handles can be found under this namespace.
    */
-  AnnotationCollection(const FilterCriteria& criteria);
+  AnnotationCollection(const FilterCriteria& criteria, const std::string& srv_namespace = "");
 
   virtual ~AnnotationCollection();
 
@@ -218,6 +244,7 @@ public:
     }
     return count;
   }
+
 };
 
 } // namespace wcf

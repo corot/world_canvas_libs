@@ -17,14 +17,19 @@
 namespace wcf
 {
 
-AnnotationCollection::AnnotationCollection(const std::string& world)
-  : filter(FilterCriteria(world))
+AnnotationCollection::AnnotationCollection(const std::string& world,
+                                           const std::string& srv_namespace)
+  : AnnotationCollection(FilterCriteria(world), srv_namespace)
 {
 }
 
-AnnotationCollection::AnnotationCollection(const FilterCriteria& criteria)
-  : filter(criteria)
+AnnotationCollection::AnnotationCollection(const FilterCriteria& criteria,
+                                           const std::string& srv_namespace)
+  : filter(criteria), srv_namespace(srv_namespace)
 {
+  if (this->srv_namespace.size() == 0 || this->srv_namespace.back() != '/')
+    this->srv_namespace.push_back('/');
+
   // Filter parameters provided, so don't wait more to retrieve annotations!
   this->filterBy(criteria);
 }
@@ -38,51 +43,51 @@ bool AnnotationCollection::filterBy(const FilterCriteria& criteria)
 {
   this->filter = criteria;
 
-  ros::NodeHandle nh;
-  ros::ServiceClient client =
-      nh.serviceClient<world_canvas_msgs::GetAnnotations>("get_annotations");
-
-  ROS_INFO("Waiting for get_annotations service...");
-  if (client.waitForExistence(ros::Duration(5.0)) == false)
+  try
   {
-    ROS_ERROR("get_annotations service not available after 5s");
-    return false;
-  }
+    ros::ServiceClient client =
+        this->getServiceHandle<world_canvas_msgs::GetAnnotations>("get_annotations");
 
-  ROS_INFO("Getting annotations for world %s and additional filter criteria",
-           this->filter.getWorld().c_str());
-  world_canvas_msgs::GetAnnotations srv;
-  srv.request.world         = this->filter.getWorld();
-  srv.request.ids           = this->filter.getUuids();
-  srv.request.names         = this->filter.getNames();
-  srv.request.types         = this->filter.getTypes();
-  srv.request.keywords      = this->filter.getKeywords();
-  srv.request.relationships = this->filter.getRelationships();
-  if (client.call(srv))
-  {
-    if (srv.response.result == true)
+    ROS_INFO("Getting annotations for world %s and additional filter criteria",
+             this->filter.getWorld().c_str());
+    world_canvas_msgs::GetAnnotations srv;
+    srv.request.world         = this->filter.getWorld();
+    srv.request.ids           = this->filter.getUuids();
+    srv.request.names         = this->filter.getNames();
+    srv.request.types         = this->filter.getTypes();
+    srv.request.keywords      = this->filter.getKeywords();
+    srv.request.relationships = this->filter.getRelationships();
+    if (client.call(srv))
     {
-      if (srv.response.annotations.size() > 0)
+      if (srv.response.result == true)
       {
-        ROS_INFO("%lu annotations found", srv.response.annotations.size());
+        if (srv.response.annotations.size() > 0)
+        {
+          ROS_INFO("%lu annotations found", srv.response.annotations.size());
+        }
+        else
+        {
+          ROS_INFO("No annotations found for world %s with the given search criteria",
+                   this->filter.getWorld().c_str());
+        }
+        this->annotations = srv.response.annotations;
+        return true;
       }
       else
       {
-        ROS_INFO("No annotations found for world %s with the given search criteria",
-                 this->filter.getWorld().c_str());
+        ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+        return false;
       }
-      this->annotations = srv.response.annotations;
-      return true;
     }
     else
     {
-      ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+      ROS_ERROR("Failed to call get_annotations service");
       return false;
     }
   }
-  else
+  catch (const ros::Exception& e)
   {
-    ROS_ERROR("Failed to call get_annotations service");
+    ROS_ERROR("ROS exception caught: %s", e.what());
     return false;
   }
 }
@@ -101,46 +106,46 @@ bool AnnotationCollection::loadData()
     return false;
   }
 
-  ros::NodeHandle nh;
-  ros::ServiceClient client =
-      nh.serviceClient<world_canvas_msgs::GetAnnotationsData>("get_annotations_data");
-
-  ROS_INFO("Waiting for get_annotations_data service...");
-  if (client.waitForExistence(ros::Duration(5.0)) == false)
+  try
   {
-    ROS_ERROR("get_annotations_data service not available after 5s");
-    return false;
-  }
+    ros::ServiceClient client =
+        this->getServiceHandle<world_canvas_msgs::GetAnnotationsData>("get_annotations_data");
 
-  // Request from server the data for annotations previously retrieved; note that we send data
-  // uuids, that identify the data associated to the annotation instead of the annotation itself
-  ROS_INFO("Loading data for the %lu retrieved annotations", this->annotations.size());
-  world_canvas_msgs::GetAnnotationsData srv;
-  srv.request.annotation_ids = this->getAnnotsDataIDs();
-  if (client.call(srv))
-  {
-    if (srv.response.result == true)
+    // Request from server the data for annotations previously retrieved; note that we send data
+    // uuids, that identify the data associated to the annotation instead of the annotation itself
+    ROS_INFO("Loading data for the %lu retrieved annotations", this->annotations.size());
+    world_canvas_msgs::GetAnnotationsData srv;
+    srv.request.annotation_ids = this->getAnnotsDataIDs();
+    if (client.call(srv))
     {
-      if (srv.response.data.size() > 0)
+      if (srv.response.result == true)
       {
-        ROS_INFO("%lu annotations data found", srv.response.data.size());
+        if (srv.response.data.size() > 0)
+        {
+          ROS_INFO("%lu annotations data found", srv.response.data.size());
+        }
+        else
+        {
+          ROS_INFO("No data found for the %lu retrieved annotations", this->annotations.size());
+        }
+        this->annots_data = srv.response.data;
+        return true;
       }
       else
       {
-        ROS_INFO("No data found for the %lu retrieved annotations", this->annotations.size());
+        ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+        return false;
       }
-      this->annots_data = srv.response.data;
-      return true;
     }
     else
     {
-      ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+      ROS_ERROR("Failed to call get_annotations_data service");
       return false;
     }
   }
-  else
+  catch (const ros::Exception& e)
   {
-    ROS_ERROR("Failed to call get_annotations_data service");
+    ROS_ERROR("ROS exception caught: %s", e.what());
     return false;
   }
 }
@@ -269,51 +274,52 @@ bool AnnotationCollection::publish(const std::string& topic_name, bool by_server
     }
   }
 
-  if (by_server == true)
+  try
   {
-    ros::NodeHandle nh;
-    ros::ServiceClient client =
-        nh.serviceClient<world_canvas_msgs::PubAnnotationsData>("pub_annotations_data");
-    ROS_INFO("Waiting for pub_annotations_data service...");
-    if (client.waitForExistence(ros::Duration(5.0)) == false)
+    if (by_server == true)
     {
-      ROS_ERROR("pub_annotations_data service not available after 5s");
-      return false;
-    }
+      ros::ServiceClient client =
+          this->getServiceHandle<world_canvas_msgs::PubAnnotationsData>("pub_annotations_data");
 
-    // Request server to publish the annotations previously retrieved; note that we send the data
-    // uuids, that identify the data associated to the annotation instead of the annotation itself
-    ROS_INFO("Requesting server to publish annotations");
-    world_canvas_msgs::PubAnnotationsData srv;
-    srv.request.annotation_ids = this->getAnnotsDataIDs();
-    srv.request.topic_name = topic_name;
-    srv.request.topic_type = common_tt;
-    srv.request.pub_as_list = as_list;
-    if (client.call(srv))
-    {
-      if (srv.response.result == true)
+      // Request server to publish the annotations previously retrieved; note that we send the data
+      // uuids, that identify the data associated to the annotation instead of the annotation itself
+      ROS_INFO("Requesting server to publish annotations");
+      world_canvas_msgs::PubAnnotationsData srv;
+      srv.request.annotation_ids = this->getAnnotsDataIDs();
+      srv.request.topic_name = topic_name;
+      srv.request.topic_type = common_tt;
+      srv.request.pub_as_list = as_list;
+      if (client.call(srv))
       {
-        return true;
+        if (srv.response.result == true)
+        {
+          return true;
+        }
+        else
+        {
+          ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+          return false;
+        }
       }
       else
       {
-        ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+        ROS_ERROR("Failed to call pub_annotations_data service");
         return false;
       }
     }
     else
     {
-      ROS_ERROR("Failed to call pub_annotations_data service");
+      // TODO: we cannot publish here without the messages class, as we did with Python. Maybe I can
+      // use templates, as the user of this class knows the message class. Or I can even make this a
+      // template class, assuming annotations collections have a uniform type.
+      // See https://github.com/corot/world_canvas/issues/5 for details
+      ROS_ERROR("Publish by client not implemented!");
       return false;
     }
   }
-  else
+  catch (const ros::Exception& e)
   {
-    // TODO: we cannot publish here without the messages class, as we did with Python. Maybe I can
-    // use templates, as the user of this class knows the message class. Or I can even make this a
-    // template class, assuming annotations collections have a uniform type.
-    // See https://github.com/corot/world_canvas/issues/5 for details
-    ROS_ERROR("Publish by client not implemented!");
+    ROS_ERROR("ROS exception caught: %s", e.what());
     return false;
   }
 }

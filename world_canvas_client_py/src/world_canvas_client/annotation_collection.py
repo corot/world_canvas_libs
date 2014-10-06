@@ -49,15 +49,15 @@ from world_canvas_utils.serialization import *
 
 class AnnotationCollection:
 
-    def __init__(self, world_namespace='', world=None, uuids=[], names=[], types=[], keywords=[], relationships=[]):
+    def __init__(self, world=None, uuids=[], names=[], types=[], keywords=[], relationships=[], srv_namespace=''):
         '''
-        @param world_namespace: World canvas handles can be found under this namespace
-        @param world:           Annotations in this collection belong to this world
-        @param uuids:           Filter annotations by their uuid
-        @param names:           Filter annotations by their name
-        @param types:           Filter annotations by their type
-        @param keywords:        Filter annotations by their keywords
-        @param relationships:   Filter annotations by their relationships
+        @param world:         Annotations in this collection belong to this world.
+        @param uuids:         Filter annotations by their uuid.
+        @param names:         Filter annotations by their name.
+        @param types:         Filter annotations by their type.
+        @param keywords:      Filter annotations by their keywords.
+        @param relationships: Filter annotations by their relationships.
+        @param srv_namespace: World canvas handles can be found under this namespace.
 
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
@@ -65,10 +65,10 @@ class AnnotationCollection:
         This class can also publish the retrieved annotations and RViz visualization
         markers, mostly for debug purposes.
         '''
-        if not world_namespace.endswith('/'):
-            self._world_namespace = world_namespace + '/'
+        if not srv_namespace.endswith('/'):
+            self._srv_namespace = srv_namespace + '/'
         else:
-            self._world_namespace = world_namespace
+            self._srv_namespace = srv_namespace
         self.annotations = list()
         self.annots_data = list()
 
@@ -80,17 +80,17 @@ class AnnotationCollection:
 
     def filterBy(self, world, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
-        @param world:         Annotations in this collection belong to this world
-        @param uuids:         Filter annotations by their uuid
-        @param names:         Filter annotations by their name
-        @param types:         Filter annotations by their type
-        @param keywords:      Filter annotations by their keywords
-        @param relationships: Filter annotations by their relationships
+        @param world:         Annotations in this collection belong to this world.
+        @param uuids:         Filter annotations by their uuid.
+        @param names:         Filter annotations by their name.
+        @param types:         Filter annotations by their type.
+        @param keywords:      Filter annotations by their keywords.
+        @param relationships: Filter annotations by their relationships.
         @returns True on success, False otherwise.
 
         Reload annotations collection, filtered by new selection criteria.
         '''
-        rospy.loginfo("Getting annotations for world %s and additional filter criteria", world)
+        rospy.loginfo("Getting annotations for world '%s' and additional filter criteria", world)
         get_anns_srv = self._get_service_handle('get_annotations', world_canvas_msgs.srv.GetAnnotations)
 
         response = get_anns_srv(world,
@@ -103,7 +103,7 @@ class AnnotationCollection:
                 rospy.loginfo("%d annotations found", len(response.annotations))
                 self.annotations = response.annotations
             else:
-                rospy.loginfo("No annotations found for world %s with the given search criteria", world)
+                rospy.loginfo("No annotations found for world '%s' with the given search criteria", world)
                 self.annotations = list()
         else:
             rospy.logerr("Server reported an error: ", response.message)
@@ -150,7 +150,7 @@ class AnnotationCollection:
                 if msg_class is None:
                     # This could happen if the message type is wrong or not known for this node (i.e. its
                     # package is not on ROS_PACKAGE_PATH). Both cases are really weird in the client side.
-                    rospy.logerr("Data type %s definition not found" % d.type)
+                    rospy.logerr("Data type '%s' definition not found" % d.type)
                     return False
                 try:
                     object = deserializeMsg(d.data, msg_class)
@@ -269,7 +269,7 @@ class AnnotationCollection:
             if msg_class is None:
                 # This could happen if the message type is wrong or not known for this node (i.e. its
                 # package is not on ROS_PACKAGE_PATH). Both cases are really weird in the client side.
-                rospy.logerr("Topic type %s definition not found" % topic_type)
+                rospy.logerr("Topic type '%s' definition not found" % topic_type)
                 return False
             
             # Advertise a topic with message type topic_type if we will publish results as a list (note that we
@@ -281,7 +281,7 @@ class AnnotationCollection:
                 topic_class = roslib.message.get_message_class(topic_type)
                 if topic_class is None:
                     # Same comment as in "msg_class is None" applies here
-                    rospy.logerr("Topic type %s definition not found" % topic_type)
+                    rospy.logerr("Topic type '%s' definition not found" % topic_type)
                     return False
             else:
                 topic_class = msg_class
@@ -404,17 +404,23 @@ class AnnotationCollection:
         return response.result    
 
 
-    def _get_service_handle(self, service_name, service_type):
+    def _get_service_handle(self, service_name, service_type, timeout=5.0):
         '''
-        @param service_name: ros service name to get
-        @param service_type: service type
+        @param service_name: ROS service name to get, without namespace.
+        @param service_type: ROS service type.
+        @param timeout: Timeout to wait for the service to come up.
 
-        @returns: service handle
-        @rtypes: rospy.ServiceProxy
+        @returns: Service handle.
+        @rtypes: rospy.ServiceProxy.
+
+        @raise ROSException: if specified timeout is exceeded.
+        @raise ROSInterruptException: if shutdown interrupts wait.
+        
+        Create a service client and wait until the service is available.
         '''
 
-        rospy.loginfo("Waiting for %s service..." % str(service_name))
-        rospy.wait_for_service(service_name)
-        srv = rospy.ServiceProxy(self._world_namespace + service_name,  service_type)
+        rospy.loginfo("Waiting for '%s' service..." % str(service_name))
+        rospy.wait_for_service(self._srv_namespace + service_name, timeout)
+        srv = rospy.ServiceProxy(self._srv_namespace + service_name, service_type)
         return srv
 
