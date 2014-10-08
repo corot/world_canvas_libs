@@ -396,7 +396,7 @@ class AnnotationCollection:
         
         # Do at least a rudimentary check
         if not (len(self.annotations) == len(self.annots_data) == len(annotations) == len(annots_data)):
-            message = str("Incoherent annotation and data sizes: %d != %d != %d != %d",
+            message = str("Incoherent annotation and data sizes: %d != %d != %d != %d"%
                          len(self.annotations), len(self.annots_data), len(annotations), len(annots_data))
             rospy.logerr(message)
             raise WCFError(message)
