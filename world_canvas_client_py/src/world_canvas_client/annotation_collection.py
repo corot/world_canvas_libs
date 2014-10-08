@@ -280,7 +280,7 @@ class AnnotationCollection:
             # ignore list's type) or use current annotations type otherwise (we have verified that it's unique) 
             if as_list:
                 if topic_type is None:
-                    message ="Topic type argument is mandatory if as_list is true")
+                    message ="Topic type argument is mandatory if as_list is true"
                     rospy.logerr(message)
                     raise WCFError(message)
                 topic_class = roslib.message.get_message_class(topic_type)
