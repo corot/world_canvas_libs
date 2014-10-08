@@ -13,6 +13,7 @@ if __name__ == '__main__':
     topic_name  = rospy.get_param('~topic_name', 'annotations')
     topic_type  = rospy.get_param('~topic_type', None)
     pub_as_list = rospy.get_param('~pub_as_list', False)
+    namespace   = rospy.get_param('~srv_namespace', '')
     world    = rospy.get_param('~world')
     uuids    = rospy.get_param('~uuids', [])
     names    = rospy.get_param('~names', [])
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     keywords = rospy.get_param('~keywords', [])
     related  = rospy.get_param('~relationships', [])
 
-    ac = world_canvas_client.AnnotationCollection('', world, uuids, names, types, keywords, related)
+    ac = world_canvas_client.AnnotationCollection(world, uuids, names, types, keywords, related, namespace)
     ac.loadData()
     walls = ac.getDataOfType(yocs_msgs.msg.Wall)
     columns = ac.getDataOfType(yocs_msgs.msg.Column)
