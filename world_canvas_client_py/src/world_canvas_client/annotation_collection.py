@@ -59,6 +59,7 @@ class AnnotationCollection:
         @param keywords:      Filter annotations by their keywords.
         @param relationships: Filter annotations by their relationships.
         @param srv_namespace: World canvas handles can be found under this namespace.
+        @raise WCFError:       if it fails to process the method 
 
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
@@ -76,7 +77,6 @@ class AnnotationCollection:
         if world is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
             self.filterBy(world, uuids, names, types, keywords, relationships)
-        return
 
     def filterBy(self, world, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
@@ -86,6 +86,7 @@ class AnnotationCollection:
         @param types:         Filter annotations by their type.
         @param keywords:      Filter annotations by their keywords.
         @param relationships: Filter annotations by their relationships.
+        @raise WCFError:       if it fails to process the method 
 
         Reload annotations collection, filtered by new selection criteria.
         '''
@@ -111,14 +112,14 @@ class AnnotationCollection:
 
     def loadData(self):    
         '''
-        @returns True on success, False otherwise.
+        @raise WCFError:       if it fails to process the method 
         
         Load associated data for the current annotations collection.
         '''
         if len(self.annotations) == 0:
             message = "No annotations retrieved. Nothing to load!"
-            rospy.logerr(message)
-            raise WCFError(message)
+            rospy.logwarn(message)
+            return
             
         get_data_srv = self._get_service_handle('get_annotations_data', world_canvas_msgs.srv.GetAnnotationsData)
         rospy.loginfo("Loading data for the %d retrieved annotations", len(self.annotations))
@@ -140,6 +141,7 @@ class AnnotationCollection:
         '''
         @returns The ROS message associated to the given annotation or None if it was not found
         or there was an error.
+        @raise WCFError:       if it fails to process the method 
         
         Get the associated data (ROS message) of a given annotation.
         '''
@@ -190,13 +192,14 @@ class AnnotationCollection:
     def publishMarkers(self, topic):
         '''
         @param topic: Where we must publish annotations markers.
+        @raise WCFError:       if it fails to process the method 
         
         Publish RViz visualization markers for the current collection of annotations.
         '''
         if len(self.annotations) == 0:
             messages = "No annotations retrieved. Nothing to publish!"
-            rospy.logerr(messages)
-            raise WCFError(messages)
+            rospy.logwarn(messages)
+            return
             
         # Advertise a topic for retrieved annotations' visualization markers
         markers_pub = rospy.Publisher(topic, MarkerArray, latch=True, queue_size=5)
@@ -231,6 +234,7 @@ class AnnotationCollection:
         @param by_server:  Request the server to publish the annotations instead of this client.
         @param as_list:    If true, annotations will be packed in a list before publishing,
                            so topic_type must be an array of currently loaded annotations.
+        @raise WCFError:   if it fails to process the method 
         
         Publish the current collection of annotations, by this client or by the server.
         As we use just one topic, all annotations must be of the same type (function will return
@@ -238,8 +242,8 @@ class AnnotationCollection:
         '''
         if len(self.annotations) == 0:
             message = "No annotations retrieved. Nothing to publish!"
-            rospy.logerr(message)
-            raise WCFError(message)
+            rospy.logwarn(message)
+            return
 
         if by_server:
             # Request server to publish the annotations previously retrieved
@@ -250,7 +254,6 @@ class AnnotationCollection:
                 message = "Server reported an error: %s" % response.message
                 rospy.logerr(message)
                 raise WCFError(message)
-            return response.result
         else:
             # Take annotations message type and verify that it's the same within the collection,
             # as we will publish all the elements with the same topic (as a list or one by one)
@@ -311,6 +314,7 @@ class AnnotationCollection:
         @param annotation: The new annotation.
         @param msg:        Its associated data. If None, we assume that we are adding an annotation to existing data.
         @param gen_uuid:   Generate an unique id for the new annotation or use the received one.
+        @raise WCFError:       if it fails to process the method 
         
         Add a new annotation with a new associated data or for an existing data.
         '''
@@ -356,7 +360,7 @@ class AnnotationCollection:
 
         if 'ann_to_delete' not in locals():
             rospy.logwarn("Annotation '%s' not found", unique_id.toHexString(uuid))
-            return False
+            return
 
         for d in self.annots_data:
             if d.id == a.data_id:
