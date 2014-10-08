@@ -45,7 +45,7 @@ import world_canvas_msgs.srv
 from rospy_message_converter import message_converter
 from visualization_msgs.msg import Marker, MarkerArray
 from world_canvas_utils.serialization import *
-from .exception import WCFError
+from .exceptions import WCFError
 
 
 class AnnotationCollection:
@@ -286,7 +286,7 @@ class AnnotationCollection:
                 topic_class = roslib.message.get_message_class(topic_type)
                 if topic_class is None:
                     # Same comment as in "msg_class is None" applies here
-                    message = "Topic type '%s' definition not found" % topic_type)
+                    message = "Topic type '%s' definition not found" % topic_type
                     rospy.logerr(message)
                     raise WCFError(message)
             else:
@@ -365,8 +365,7 @@ class AnnotationCollection:
                 break
 
         if 'data_to_delete' not in locals():
-            message = "No data found for annotation '%s' (data uuid is '%s')",
-                      unique_id.toHexString(uuid), unique_id.toHexString(ann_to_delete.data_id)
+            message = "No data found for annotation '%s' (data uuid is '%s')"%(unique_id.toHexString(uuid), unique_id.toHexString(ann_to_delete.data_id))
             rospy.logerr(message)
             raise WCFError(message)
 
