@@ -59,7 +59,7 @@ class AnnotationCollection:
         @param keywords:      Filter annotations by their keywords.
         @param relationships: Filter annotations by their relationships.
         @param srv_namespace: World canvas handles can be found under this namespace.
-        @raise WCFError:       if it fails to process the method 
+        @raise WCFError:      If something went wrong. 
 
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
@@ -86,7 +86,7 @@ class AnnotationCollection:
         @param types:         Filter annotations by their type.
         @param keywords:      Filter annotations by their keywords.
         @param relationships: Filter annotations by their relationships.
-        @raise WCFError:       if it fails to process the method 
+        @raise WCFError:      If something went wrong. 
 
         Reload annotations collection, filtered by new selection criteria.
         '''
@@ -106,20 +106,21 @@ class AnnotationCollection:
                 rospy.loginfo("No annotations found for world '%s' with the given search criteria", world)
                 self.annotations = list()
         else:
-            message  = "Server reported an error: %s"%response.message
+            message  = "Server reported an error: %s" % response.message
             rospy.logerr(message)
             raise WCFError(message) 
 
     def loadData(self):    
         '''
-        @raise WCFError:       if it fails to process the method 
+        @returns Number of annotations retrieved.
+        @raise WCFError: If something went wrong. 
         
         Load associated data for the current annotations collection.
         '''
         if len(self.annotations) == 0:
             message = "No annotations retrieved. Nothing to load!"
             rospy.logwarn(message)
-            return
+            return 0
             
         get_data_srv = self._get_service_handle('get_annotations_data', world_canvas_msgs.srv.GetAnnotationsData)
         rospy.loginfo("Loading data for the %d retrieved annotations", len(self.annotations))
@@ -133,15 +134,16 @@ class AnnotationCollection:
                 rospy.logwarn("No data found for the %d retrieved annotations", len(self.annotations))
                 self.annots_data = list()
         else:
-            message = "Server reported an error: %s"%response.message
+            message = "Server reported an error: %s" % response.message
             rospy.logerr(message)
             raise WCFError(message)
+
+        return len(response.data)
     
     def getData(self, annotation):
         '''
-        @returns The ROS message associated to the given annotation or None if it was not found
-        or there was an error.
-        @raise WCFError:       if it fails to process the method 
+        @returns The ROS message associated to the given annotation or None if it was not found.
+        @raise WCFError: If something else went wrong. 
         
         Get the associated data (ROS message) of a given annotation.
         '''
@@ -160,7 +162,7 @@ class AnnotationCollection:
                 except SerializationError as e:
                     message = "Deserialization failed: %s" % str(e)
                     rospy.logerr(message)
-                    return None
+                    raise WCFError(message)
                 return object
         rospy.logwarn("Data uuid not found: " + unique_id.toHexString(annotation.data_id))
         return None
@@ -192,7 +194,6 @@ class AnnotationCollection:
     def publishMarkers(self, topic):
         '''
         @param topic: Where we must publish annotations markers.
-        @raise WCFError:       if it fails to process the method 
         
         Publish RViz visualization markers for the current collection of annotations.
         '''
@@ -234,7 +235,7 @@ class AnnotationCollection:
         @param by_server:  Request the server to publish the annotations instead of this client.
         @param as_list:    If true, annotations will be packed in a list before publishing,
                            so topic_type must be an array of currently loaded annotations.
-        @raise WCFError:   if it fails to process the method 
+        @raise WCFError:   If something went wrong. 
         
         Publish the current collection of annotations, by this client or by the server.
         As we use just one topic, all annotations must be of the same type (function will return
@@ -314,7 +315,7 @@ class AnnotationCollection:
         @param annotation: The new annotation.
         @param msg:        Its associated data. If None, we assume that we are adding an annotation to existing data.
         @param gen_uuid:   Generate an unique id for the new annotation or use the received one.
-        @raise WCFError:       if it fails to process the method 
+        @raise WCFError:   If something went wrong. 
         
         Add a new annotation with a new associated data or for an existing data.
         '''
@@ -352,6 +353,14 @@ class AnnotationCollection:
         self.annotations.append(annotation)
     
     def delete(self, uuid):
+        '''
+        @param uuid: The uuid of the annotation to delete.
+        @returns True if successfully removed, False if the annotation was not found.
+        @raise WCFError: If something else went wrong. 
+        
+        Delete an annotation with its associated data.
+        WARN/TODO: we are ignoring the case of N annotations - 1 data!
+        '''
         for a in self.annotations:
             if a.id == uuid:
                 rospy.logdebug("Annotation '%s' found", unique_id.toHexString(uuid))
@@ -360,7 +369,7 @@ class AnnotationCollection:
 
         if 'ann_to_delete' not in locals():
             rospy.logwarn("Annotation '%s' not found", unique_id.toHexString(uuid))
-            return
+            return False
 
         for d in self.annots_data:
             if d.id == a.data_id:
@@ -369,7 +378,8 @@ class AnnotationCollection:
                 break
 
         if 'data_to_delete' not in locals():
-            message = "No data found for annotation '%s' (data uuid is '%s')"%(unique_id.toHexString(uuid), unique_id.toHexString(ann_to_delete.data_id))
+            message = "No data found for annotation '%s' (data uuid is '%s')" \
+                    % (unique_id.toHexString(uuid), unique_id.toHexString(ann_to_delete.data_id))
             rospy.logerr(message)
             raise WCFError(message)
 
@@ -377,8 +387,16 @@ class AnnotationCollection:
         rospy.logdebug("Removed annot. data with uuid '%s'", unique_id.toHexString(data_to_delete.id))
         self.annotations.remove(ann_to_delete)
         self.annots_data.remove(data_to_delete)
+        
+        return True
 
     def save(self):
+        '''
+        @raise WCFError: If something went wrong.
+        
+        Save current annotations list with their associated data.
+        WARN/TODO: we are ignoring the case of N annotations - 1 data!
+        '''
         rospy.loginfo("Requesting server to save annotations")
         annotations = []
         annots_data = []
@@ -419,13 +437,16 @@ class AnnotationCollection:
         @returns: Service handle.
         @rtypes: rospy.ServiceProxy.
 
-        @raise ROSException: if specified timeout is exceeded.
-        @raise ROSInterruptException: if shutdown interrupts wait.
+        @raise  WCFError: If specified timeout is exceeded or shutdown interrupts wait.
         
         Create a service client and wait until the service is available.
         '''
-
-        rospy.loginfo("Waiting for '%s' service..." % str(service_name))
-        rospy.wait_for_service(self._srv_namespace + service_name, timeout)
-        srv = rospy.ServiceProxy(self._srv_namespace + service_name, service_type)
-        return srv
+        try:
+            rospy.loginfo("Waiting for '%s' service..." % str(service_name))
+            rospy.wait_for_service(self._srv_namespace + service_name, timeout)
+            srv = rospy.ServiceProxy(self._srv_namespace + service_name, service_type)
+            return srv
+        except rospy.exceptions.ROSInterruptException as e:
+            raise WCFError("Wait interrupted by shutdown: %s" % str(e))
+        except rospy.exceptions.ROSException as e:
+            raise WCFError("%d seconds elapsed: %s" % (timeout, str(e)))
