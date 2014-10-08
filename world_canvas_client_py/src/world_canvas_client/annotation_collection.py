@@ -391,17 +391,19 @@ class AnnotationCollection:
         
         # Do at least a rudimentary check
         if not (len(self.annotations) == len(self.annots_data) == len(annotations) == len(annots_data)):
-            rospy.logerr("Incoherent annotation and data sizes: %d != %d != %d != %d",
+            message = str("Incoherent annotation and data sizes: %d != %d != %d != %d",
                          len(self.annotations), len(self.annots_data), len(annotations), len(annots_data))
-            return False
+            return False, message
 
         # Request server to save current annotations list, with its data
         save_data_srv = self._get_service_handle('save_annotations_data', world_canvas_msgs.srv.SaveAnnotationsData)
         rospy.loginfo("Requesting server to save annotations")
         response = save_data_srv(annotations, annots_data)
         if not response.result:
-            rospy.logerr("Server reported an error: %s" % response.message)
-        return response.result    
+            message = str("Server reported an error: %s" % response.message)
+        else:
+            message = "Success"
+        return response.result, message
 
 
     def _get_service_handle(self, service_name, service_type, timeout=5.0):
