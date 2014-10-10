@@ -93,10 +93,9 @@ class AnnotationCollection:
         rospy.loginfo("Getting annotations for world '%s' and additional filter criteria", world)
         get_anns_srv = self._get_service_handle('get_annotations', world_canvas_msgs.srv.GetAnnotations)
 
-        response = get_anns_srv(world,
-                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in uuids],
-                                names, types, keywords,
-                               [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in relationships])
+        ids = [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in uuids] 
+        relationships = [unique_id.toMsg(uuid.UUID('urn:uuid:' + id)) for id in relationships]
+        response = get_anns_srv(world, ids, names, types, keywords, relationships)
 
         if response.result:
             if len(response.annotations) > 0:
@@ -109,6 +108,28 @@ class AnnotationCollection:
             message  = "Server reported an error: %s" % response.message
             rospy.logerr(message)
             raise WCFError(message) 
+
+    def getAnnotations(self, name=None, type=None):
+        '''
+        @returns the currently loaded  annotations
+        '''
+        ret = None
+        if len(self.annotations) == 0:
+            message = "No annotations retrieved. Nothing to load!"
+            rospy.logwarn(message)
+            ret = None
+        else:
+            # copying before return to prevent unexpected data curruption 
+            if name:
+                name_filtered = [a for a in self.annotations if a.name == name]
+            else:
+                name_filtered = [a for a in self.annotations]
+
+            if type:
+                ret = [copy.deepcopy(a) for a in name_filtered if a.type == type]
+            else:
+                ret = [copy.deepcopy(a) for a in name_filtered]
+        return ret
 
     def loadData(self):    
         '''
@@ -414,8 +435,7 @@ class AnnotationCollection:
         
         # Do at least a rudimentary check
         if not (len(self.annotations) == len(self.annots_data) == len(annotations) == len(annots_data)):
-            message = str("Incoherent annotation and data sizes: %d != %d != %d != %d",
-                         len(self.annotations), len(self.annots_data), len(annotations), len(annots_data))
+            message = "Incoherent annotation and data sizes: %d != %d != %d != %d"%(len(self.annotations), len(self.annots_data), len(annotations), len(annots_data))
             rospy.logerr(message)
             raise WCFError(message)
 
