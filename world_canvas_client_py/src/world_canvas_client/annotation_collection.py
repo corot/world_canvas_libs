@@ -109,7 +109,7 @@ class AnnotationCollection:
             rospy.logerr(message)
             raise WCFError(message) 
 
-    def getAnnotations(self, type=''):
+    def getAnnotations(self, type=None):
         '''
         @returns the currently loaded  annotations
         '''
@@ -120,7 +120,10 @@ class AnnotationCollection:
             ret = None
         else:
             # copying before return to prevent unexpected data curruption 
-            ret = [copy.deepcopy(a) for a in self.annotations if a.type == type]
+            if type:
+                ret = [copy.deepcopy(a) for a in self.annotations if a.type == type]
+            else:
+                ret = [copy.deepcopy(a) for a in self.annotations]
         return ret
 
     def loadData(self):    
