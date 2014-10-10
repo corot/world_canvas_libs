@@ -120,7 +120,7 @@ class AnnotationCollection:
             ret = None
         else:
             # copying before return to prevent unexpected data curruption 
-            ret = [copy.deepcopy(a) for a in self.annotations if a.type == type_]
+            ret = [copy.deepcopy(a) for a in self.annotations if a.type == type]
         return ret
 
     def loadData(self):    
