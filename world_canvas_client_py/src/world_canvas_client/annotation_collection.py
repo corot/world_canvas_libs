@@ -248,29 +248,14 @@ class AnnotationCollection:
 
             markers_list.markers.append(marker)
 
-            marker_id = marker_id + 1
+            label = copy.deepcopy(marker)
+            label.id = label.id + 1000000 # marker id must be unique
+            label.type = Marker.TEXT_VIEW_FACING
+            label.text = a.name + ' [' + a.type + ']'
+            label.pose.position.z = label.pose.position.z + label.scale.z/2.0 + 0.1 # just above the visual
+            label.scale.x = label.scale.y = label.scale.z = 0.12
 
-            marker = Marker()
-            marker = Marker()
-            marker.header.frame_id = '/map'
-            marker.ns = 'marker'
-            marker.id = marker_id
-
-            marker.type = Marker.TEXT_VIEW_FACING
-            marker.text = str(a.name)
-            marker.action = Marker.ADD
-            marker.pose.position.x = a.pose.pose.pose.position.x
-            marker.pose.position.y = a.pose.pose.pose.position.y
-            marker.pose.position.z = a.pose.pose.pose.position.z + 0.5
-            marker.scale.x = 0.3
-            marker.scale.y = 0.3
-            marker.scale.z = 0.3
-            marker.color.r = 1.0
-            marker.color.g = 1.0
-            marker.color.b = 1.0
-            marker.color.a = 1.0
-
-            markers_list.markers.append(marker)
+            markers_list.markers.append(label)
 
             marker_id = marker_id + 1
 
