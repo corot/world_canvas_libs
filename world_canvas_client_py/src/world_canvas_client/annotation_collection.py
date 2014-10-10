@@ -109,7 +109,7 @@ class AnnotationCollection:
             rospy.logerr(message)
             raise WCFError(message) 
 
-    def getAnnotations(self, type_=''):
+    def getAnnotations(self, type=''):
         '''
         @returns the currently loaded  annotations
         '''
