@@ -252,7 +252,7 @@ class AnnotationCollection:
 
         markers_pub.publish(markers_list)
 
-    def publish(self, topic_name, topic_type=None, by_server=False, as_list=False):
+    def publish(self, topic_name, topic_type=None, by_server=False, as_list=False, list_attribute=None):
         '''
         @param topic_name: Where we must publish annotations data.
         @param topic_type: The message type to publish annotations data.
@@ -329,7 +329,18 @@ class AnnotationCollection:
 
             # Publish resulting list
             if as_list:
-                objects_pub.publish(objects_list)
+                
+                if list_attribute:
+                    try:
+                        msg = topic_class() 
+                        setattr(msg, list_attribute, objects_list)
+                    except AttributeError as e: 
+                        message = "List attribute caused error[%s]"%str(e)
+                        rospy.logerr(message)
+                        raise WCFError(message)
+                else:
+                    msg = topic_class(objects_list)
+                objects_pub.publish(msg)
             else:
                 # if as_list is false, publish objects one by one
                 for object in objects_list:
