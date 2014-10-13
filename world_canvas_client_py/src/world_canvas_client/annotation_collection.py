@@ -49,7 +49,17 @@ from .exceptions import WCFError
 
 
 class AnnotationCollection:
-
+    '''
+    A collection of annotations and its associated data, initially empty. Annotations
+    and data are retrieved from the world canvas server, filtered by a set of selection
+    criteria (see constructor parameters).
+    The collection can be reloaded with different filter criteria. There're also methods
+    to add and delete individual annotations (an "update" method is TODO). But changes are
+    only saved to database by calling "save" method. 
+    This class can also publish the retrieved annotations and RViz visualization markers,
+    mostly for debug purposes.
+    '''
+    
     def __init__(self, world=None, uuids=[], names=[], types=[], keywords=[], relationships=[], srv_namespace=''):
         '''
         @param world:         Annotations in this collection belong to this world.
@@ -64,8 +74,6 @@ class AnnotationCollection:
         Creates a collection of annotations and its associated data, initially empty.
         Annotations and data are retrieved from the world canvas server, filtered by
         the described parameters.
-        This class can also publish the retrieved annotations and RViz visualization
-        markers, mostly for debug purposes.
         '''
         if not srv_namespace.endswith('/'):
             self._srv_namespace = srv_namespace + '/'
@@ -73,7 +81,9 @@ class AnnotationCollection:
             self._srv_namespace = srv_namespace
         self._annotations = list()
         self._annots_data = list()
-
+        self._annots_to_delete = list()
+        self._saved = True
+        
         if world is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
             self.filterBy(world, uuids, names, types, keywords, relationships)
@@ -103,7 +113,12 @@ class AnnotationCollection:
                 self._annotations = response.annotations
             else:
                 rospy.loginfo("No annotations found for world '%s' with the given search criteria", world)
-                self._annotations = list()
+                del self._annotations[:]
+            
+            # All non-saved information gets invalidated after reload the collection
+            del self._annots_data[:]
+            del self._annots_to_delete[:]
+            self._saved = True
         else:
             message = "Server reported an error: %s" % response.message
             rospy.logerr(message)
@@ -157,7 +172,7 @@ class AnnotationCollection:
                 self._annots_data = response.data
             else:
                 rospy.logwarn("No data found for the %d retrieved annotations", len(self._annotations))
-                self._annots_data = list()
+                del self._annots_data[:]
         else:
             message = "Server reported an error: %s" % response.message
             rospy.logerr(message)
@@ -397,6 +412,7 @@ class AnnotationCollection:
             self._annots_data.append(annot_data)
 
         self._annotations.append(annotation)
+        self._saved = False
 
     def delete(self, uuid):
         '''
@@ -433,6 +449,9 @@ class AnnotationCollection:
         rospy.logdebug("Removed annot. data with uuid '%s'", unique_id.toHexString(data_to_delete.id))
         self._annotations.remove(ann_to_delete)
         self._annots_data.remove(data_to_delete)
+        
+        self._annots_to_delete.append(ann_to_delete)
+        self._saved = False
 
         return True
 
@@ -440,7 +459,8 @@ class AnnotationCollection:
         '''
         @raise WCFError: If something went wrong.
 
-        Save current annotations list with their associated data.
+        Save to database current annotations list with their associated data. Also remove from database
+        the annotations deemed by delete method, if any.
         WARN/TODO: we are ignoring the case of N annotations - 1 data!
         '''
         rospy.loginfo("Requesting server to save annotations")
@@ -473,6 +493,21 @@ class AnnotationCollection:
             message = str("Server reported an error: %s" % response.message)
             rospy.logerr(message)
             raise WCFError(message)
+        
+        # We must also remove from database the annotations deemed by delete method, if any
+        if len(self._annots_to_delete) > 0:
+            del_anns_srv = self._get_service_handle('delete_annotations', world_canvas_msgs.srv.DeleteAnnotations)
+            rospy.loginfo("Requesting server to delete %d deemed annotations" % len(self._annots_to_delete))
+            response = del_anns_srv(self._annots_to_delete)
+            if not response.result:
+                message = str("Server reported an error: %s" % response.message)
+                rospy.logerr(message)
+                raise WCFError(message)
+
+        self._saved = True
+
+    def isSaved(self):
+        return self._saved
 
     def _get_service_handle(self, service_name, service_type, timeout=5.0):
         '''
