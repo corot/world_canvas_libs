@@ -268,7 +268,8 @@ class AnnotationCollection:
             label.type = Marker.TEXT_VIEW_FACING
             label.text = a.name + ' [' + a.type + ']'
             label.pose.position.z = label.pose.position.z + label.scale.z/2.0 + 0.1 # just above the visual
-            label.scale.x = label.scale.y = label.scale.z = 0.12
+            label.scale.x = label.scale.y = label.scale.z = 0.3
+            label.color.r = label.color.g = label.color.b = label.color.a = 1.0
 
             markers_list.markers.append(label)
 
