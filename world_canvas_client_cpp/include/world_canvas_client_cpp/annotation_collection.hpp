@@ -18,6 +18,7 @@
 
 #include "world_canvas_client_cpp/unique_id.hpp"
 #include "world_canvas_client_cpp/filter_criteria.hpp"
+#include "world_canvas_client_cpp/world_canvas_client.hpp"
 
 namespace wcf
 {
@@ -29,7 +30,7 @@ namespace wcf
  * This class can also publish the retrieved annotations and RViz visualization
  * markers, mostly for debug purposes.
  */
-class AnnotationCollection
+class AnnotationCollection : public WorldCanvasClient
 {
 protected:
   ros::NodeHandle nh;

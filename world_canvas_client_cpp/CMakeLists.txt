@@ -18,7 +18,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(world_canvas_client src/annotation_collection.cpp src/filter_criteria.cpp src/unique_id.cpp)
+add_library(world_canvas_client src/annotation_collection.cpp
+                                src/world_collection.cpp
+                                src/filter_criteria.cpp
+                                src/unique_id.cpp)
 add_dependencies(world_canvas_client uuid_msgs_gencpp world_canvas_msgs_gencpp)
 target_link_libraries(world_canvas_client ${catkin_LIBRARIES})
 

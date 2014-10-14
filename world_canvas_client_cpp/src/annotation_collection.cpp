@@ -25,11 +25,8 @@ AnnotationCollection::AnnotationCollection(const std::string& world,
 
 AnnotationCollection::AnnotationCollection(const FilterCriteria& criteria,
                                            const std::string& srv_namespace)
-  : filter(criteria), srv_namespace(srv_namespace)
+  : WorldCanvasClient(srv_namespace), filter(criteria)
 {
-  if (this->srv_namespace.size() == 0 || this->srv_namespace.back() != '/')
-    this->srv_namespace.push_back('/');
-
   // Filter parameters provided, so don't wait more to retrieve annotations!
   this->filterBy(criteria);
 }
