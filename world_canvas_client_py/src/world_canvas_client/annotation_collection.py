@@ -267,9 +267,9 @@ class AnnotationCollection:
             label.id = label.id + 1000000 # marker id must be unique
             label.type = Marker.TEXT_VIEW_FACING
             label.text = a.name + ' [' + a.type + ']'
-            label.pose.position.z = label.pose.position.z + label.scale.z/2.0 + 0.1 # just above the visual
+            label.pose.position.z = label.pose.position.z + label.scale.z/2.0 + 0.12 # just above the visual
             label.scale.x = label.scale.y = label.scale.z = 0.3
-            label.color.r = label.color.g = label.color.b = label.color.a = 1.0
+            label.color.a = 1.0
 
             markers_list.markers.append(label)
 
@@ -461,7 +461,7 @@ class AnnotationCollection:
         @raise WCFError: If something went wrong.
 
         Save to database current annotations list with their associated data. Also remove from database
-        the annotations deemed by delete method, if any.
+        the annotations doomed by delete method, if any.
         WARN/TODO: we are ignoring the case of N annotations - 1 data!
         '''
         rospy.loginfo("Requesting server to save annotations")
@@ -495,10 +495,10 @@ class AnnotationCollection:
             rospy.logerr(message)
             raise WCFError(message)
         
-        # We must also remove from database the annotations deemed by delete method, if any
+        # We must also remove from database the annotations doomed by delete method, if any
         if len(self._annots_to_delete) > 0:
             del_anns_srv = self._get_service_handle('delete_annotations', world_canvas_msgs.srv.DeleteAnnotations)
-            rospy.loginfo("Requesting server to delete %d deemed annotations" % len(self._annots_to_delete))
+            rospy.loginfo("Requesting server to delete %d doomed annotations" % len(self._annots_to_delete))
             response = del_anns_srv(self._annots_to_delete)
             if not response.result:
                 message = str("Server reported an error: %s" % response.message)
