@@ -75,6 +75,13 @@ protected:
     return client;
   }
 
+  inline bool endsWith(const std::string& a, const std::string& b)
+  {
+    if (a.size() < b.size())
+      return false;
+    return (a.substr(a.size() - b.size()) == b);
+  }
+
 public:
   /**
    * Initializes the collection of annotations and associated data, initially empty.
@@ -99,31 +106,40 @@ public:
    * Reload annotations collection, filtered by new selection criteria.
    *
    * @param criteria: Annotations filter criteria to pass to the server.
-   * @returns True on success, False otherwise.
+   * @returns True on success, false otherwise.
    */
   bool filterBy(const FilterCriteria& criteria);
 
   /**
    * Load annotations collection, filtered by current selection criteria.
    *
-   * @returns True on success, False otherwise.
+   * @returns True on success, false otherwise.
    */
   bool load();
 
   /**
    * Load associated data for the current annotations collection.
    *
-   * @returns True on success, False otherwise.
+   * @returns True on success, false otherwise.
    */
   bool loadData();
+
+  /**
+   * Clears RViz visualization markers published on the given topic.
+   *
+   * @param topic: The topic on which to clear annotations markers.
+   * @returns True on success, false otherwise.
+   */
+  bool clearMarkers(const std::string& topic);
 
   /**
    * Publish RViz visualization markers for the current collection of annotations.
    *
    * @param topic: Where we must publish annotations markers.
-   * @returns True on success, False otherwise.
+   * @param clear_existing Delete all markers previously published on this topic.
+   * @returns True on success, false otherwise.
    */
-  bool publishMarkers(const std::string& topic);
+  bool publishMarkers(const std::string& topic, bool clear_existing = true);
 
   /**
    * Publish RViz visualization marker for the given annotation.
@@ -131,11 +147,11 @@ public:
    * @param topic  Where we must publish annotation marker.
    * @param marker_id Id to add to the visual marker.
    * @param ann Annotation to publish a marker for.
-   * @param deleteExisting Delete all markers previously published.
-   * @returns True on success, False otherwise.
+   * @param clear_existing Delete all markers previously published on this topic.
+   * @returns True on success, false otherwise.
    */
   bool publishMarker(const std::string& topic, int marker_id,
-                     const world_canvas_msgs::Annotation& ann, bool deleteExisting = true);
+                     const world_canvas_msgs::Annotation& ann, bool clear_existing = true);
 
   /**
    * Create a RViz visualization marker for the given annotation.
@@ -165,7 +181,7 @@ public:
    *                    so topic_type must be an array of currently loaded annotations.
    * @param topic_type: The message type to publish annotations data.
    *                    Mandatory if as_list is true; ignored otherwise.
-   * @returns True on success, False otherwise.
+   * @returns True on success, false otherwise.
    */
   bool publish(const std::string& topic_name, bool by_server = false, bool as_list = false,
                const std::string& topic_type = "");

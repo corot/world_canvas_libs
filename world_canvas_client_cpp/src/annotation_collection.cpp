@@ -147,7 +147,34 @@ bool AnnotationCollection::loadData()
   }
 }
 
-bool AnnotationCollection::publishMarkers(const std::string& topic)
+bool AnnotationCollection::clearMarkers(const std::string& topic)
+{
+  visualization_msgs::MarkerArray markers_array;
+  visualization_msgs::Marker delete_all;
+  delete_all.header.frame_id = "/map";  // TODO  OK? seems to work, but I always have /map as ref
+  delete_all.action = 3; // visualization_msgs::Marker::DELETEALL is commented but it works!
+  markers_array.markers.push_back(delete_all);
+
+  // Check if the given topic has been already advertised for single or multiple markers publishing
+  if (endsWith(marker_pub.getTopic(), topic) == true)
+  {
+    marker_pub.publish(markers_array);
+    return true;
+  }
+
+  if (endsWith(markers_pub.getTopic(), topic) == true)
+  {
+    markers_pub.publish(markers_array);
+    return true;
+  }
+
+  // Topic not yet advertised; do it!
+  markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
+  markers_pub.publish(markers_array);
+  return true;
+}
+
+bool AnnotationCollection::publishMarkers(const std::string& topic, bool clear_existing)
 {
   if (this->annotations.size() == 0)
   {
@@ -155,11 +182,14 @@ bool AnnotationCollection::publishMarkers(const std::string& topic)
     return false;
   }
 
-  if (markers_pub.getTopic() != topic)
+  if (endsWith(markers_pub.getTopic(), topic) == false)
   {
     // Advertise a topic for retrieved annotations' visualization markers
     markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
   }
+
+  if (clear_existing == true)
+    clearMarkers(topic);
 
   // Process retrieved data to build markers lists
   visualization_msgs::MarkerArray markers_array;
@@ -175,9 +205,9 @@ bool AnnotationCollection::publishMarkers(const std::string& topic)
 
 bool AnnotationCollection::publishMarker(const std::string& topic, int marker_id,
                                          const world_canvas_msgs::Annotation& ann,
-                                         bool deleteExisting)
+                                         bool clear_existing)
 {
-  if (marker_pub.getTopic() != topic)
+  if (endsWith(marker_pub.getTopic(), topic) == false)
   {
     // Advertise a topic to publish a visual marker for the given annotation
     // Use a different publisher from the one created on publishMarkers so both can be used in parallel
@@ -186,16 +216,8 @@ bool AnnotationCollection::publishMarker(const std::string& topic, int marker_id
 
   visualization_msgs::MarkerArray markers_array;
 
-  if (deleteExisting == true)
-  {
-    visualization_msgs::Marker delete_all;
-    delete_all.header = ann.pose.header;
-    delete_all.action = 3; // visualization_msgs::Marker::DELETEALL is commented but it works!
-    markers_array.markers.push_back(delete_all);
-    marker_pub.publish(markers_array);
-    ros::spinOnce();
-    markers_array.markers.clear();
-  }
+  if (clear_existing == true)
+    clearMarkers(topic);
 
   markers_array.markers.push_back(makeMarker(marker_id, ann));
   markers_array.markers.push_back(makeLabel(markers_array.markers.back()));
