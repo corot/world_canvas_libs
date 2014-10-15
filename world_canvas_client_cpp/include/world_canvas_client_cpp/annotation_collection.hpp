@@ -187,6 +187,14 @@ public:
                const std::string& topic_type = "");
 
   /**
+   * Return true if there's an annotation with the given unique id.
+   *
+   * @param id Target annotation id.
+   * @returns True if there's an annotation with the given unique id, false otherwise.
+   */
+  bool hasAnnotation(const UniqueIDmsg& id);
+
+  /**
    * Return the annotation with the given unique id.
    *
    * @param id Target annotation id.

@@ -343,6 +343,16 @@ bool AnnotationCollection::publish(const std::string& topic_name, bool by_server
   }
 }
 
+bool AnnotationCollection::hasAnnotation(const UniqueIDmsg& id)
+{
+  for (unsigned int i = 0; i < annotations.size(); i++)
+  {
+    if (annotations[i].id.uuid == id.uuid)
+      return true;
+  }
+  return false;
+}
+
 const world_canvas_msgs::Annotation& AnnotationCollection::getAnnotation(const UniqueIDmsg& id)
 {
   for (unsigned int i = 0; i < annotations.size(); i++)
