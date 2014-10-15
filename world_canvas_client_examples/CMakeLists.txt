@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   CATKIN_DEPENDS roscpp unique_id uuid_msgs nav_msgs yocs_msgs world_canvas_msgs world_canvas_client_cpp
 )
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 include_directories(${catkin_INCLUDE_DIRS})
 
 add_executable(test_annotation_collection src/test_annotation_collection.cpp)
