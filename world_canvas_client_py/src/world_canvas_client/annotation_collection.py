@@ -510,6 +510,17 @@ class AnnotationCollection:
     def isSaved(self):
         return self._saved
 
+    def getWorldlist(self):
+        '''
+        TODO: temporally here until we create a WorldCollection class, as on C++ library.
+        
+        @returns Currently available world list in the world canvas server
+        '''
+        get_world_list_srv = self._get_service_handle('list_worlds', world_canvas_msgs.srv.ListWorlds)
+        response = get_world_list_srv()
+        
+        return response.names
+
     def _get_service_handle(self, service_name, service_type, timeout=5.0):
         '''
         @param service_name: ROS service name to get, without namespace.
