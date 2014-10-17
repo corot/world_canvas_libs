@@ -124,6 +124,15 @@ class AnnotationCollection:
             rospy.logerr(message)
             raise WCFError(message)
 
+    def getWorldlist(self):
+        '''
+        @returns Currently available world list in the world canvas server
+        '''
+        get_world_list_srv = self._get_service_handle('list_worlds', world_canvas_msgs.srv.ListWorlds)
+        response = get_world_list_srv()
+        
+        return response.names
+
     def getAnnotations(self, name=None, type=None):
         '''
         @param name: Get only annotation(s) with the given name. Can be more than one, as we don't
@@ -253,7 +262,7 @@ class AnnotationCollection:
             marker = Marker()
             marker.id = marker_id
             marker.header = a.pose.header
-            marker.type = a.shape
+            marker.type = 0
             marker.ns = a.type
             marker.action = Marker.ADD
             marker.lifetime = rospy.Duration.from_sec(0)
