@@ -361,7 +361,7 @@ class AnnotationCollection:
                         msg = topic_class() 
                         setattr(msg, list_attribute, objects_list)
                     except AttributeError as e: 
-                        message = "List attribute caused error[%s]"%str(e)
+                        message = "List attribute caused error[%s]" % str(e)
                         rospy.logerr(message)
                         raise WCFError(message)
                 else:
@@ -386,7 +386,7 @@ class AnnotationCollection:
         else:
             for a in self._annotations:
                 if a.id == annotation.id:
-                    message = "Duplicated annotation with uuid '%s'", unique_id.toHexString(annotation.id)
+                    message = "Duplicated annotation with uuid '%s'" % unique_id.toHexString(annotation.id)
                     rospy.logerr(message)
                     raise WCFError(message)
 
@@ -400,7 +400,7 @@ class AnnotationCollection:
                     break
 
             if not msg_found:
-                message = "Annotation data with uuid '%s' not found", unique_id.toHexString(annotation.data_id)
+                message = "Annotation data with uuid '%s' not found" % unique_id.toHexString(annotation.data_id)
                 rospy.logerr(message)
                 raise WCFError(message)
         else:
@@ -415,7 +415,47 @@ class AnnotationCollection:
         self._annotations.append(annotation)
         self._saved = False
 
-    def delete(self, uuid):
+
+    def update(self, annotation, msg=None):
+        '''
+        @param annotation: The modified annotation.
+        @param msg:        Its associated data. If None, just the annotation is updated.
+        @raise WCFError:   If something went wrong.
+
+        Update an existing annotation and optionally its associated data.
+        '''
+        found = False
+        for i, a in enumerate(self._annotations):
+            if a.id == annotation.id:
+                self._annotations[i] = annotation
+                found = True
+                break
+
+        if not found:
+            message = "Annotation with uuid '%s' not found" % unique_id.toHexString(annotation.id)
+            rospy.logerr(message)
+            raise WCFError(message)
+
+        if msg is None:
+            return
+        
+        found = False
+        for i, d in enumerate(self._annots_data):
+            if d.id == annotation.data_id:
+                rospy.logdebug("Annotation data with uuid '%s' found", unique_id.toHexString(annotation.data_id))
+                self._annots_data[i].type = annotation.type
+                self._annots_data[i].data = serializeMsg(msg)
+                found = True
+                break
+
+        if not found:
+            message = "Annotation data with uuid '%s' not found" % unique_id.toHexString(annotation.data_id)
+            rospy.logerr(message)
+            raise WCFError(message)
+
+        self._saved = False
+
+    def remove(self, uuid):
         '''
         @param uuid: The uuid of the annotation to delete.
         @returns True if successfully removed, False if the annotation was not found.
@@ -491,7 +531,7 @@ class AnnotationCollection:
         rospy.loginfo("Requesting server to save annotations")
         response = save_data_srv(annotations, annots_data)
         if not response.result:
-            message = str("Server reported an error: %s" % response.message)
+            message = "Server reported an error: %s" % response.message
             rospy.logerr(message)
             raise WCFError(message)
         
@@ -501,7 +541,7 @@ class AnnotationCollection:
             rospy.loginfo("Requesting server to delete %d doomed annotations" % len(self._annots_to_delete))
             response = del_anns_srv(self._annots_to_delete)
             if not response.result:
-                message = str("Server reported an error: %s" % response.message)
+                message = "Server reported an error: %s" % response.message
                 rospy.logerr(message)
                 raise WCFError(message)
 
