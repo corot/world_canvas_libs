@@ -43,6 +43,11 @@ protected:
   std::vector<world_canvas_msgs::Annotation>     annotations;
   std::vector<world_canvas_msgs::AnnotationData> annots_data;
 
+  std::vector<world_canvas_msgs::Annotation> annots_to_delete;
+  bool saved;
+
+  bool saveDeletes();
+
   /**
    * Return data IDs for the current annotations collection. This method is private
    * because is only necessary for loading annotations data from server, operation
@@ -51,29 +56,6 @@ protected:
    * @returns Vector of unique IDs.
    */
   std::vector<UniqueIDmsg> getAnnotsDataIDs();
-
-  /**
-   * Create a service client of the template type and wait until the service is available.
-   *
-   * @param service_name: ROS service name to get, without namespace.
-   * @param timeout: Timeout to wait for the service to come up.
-   * @returns: The service handle.
-   * @throws: ROS exception on timeout.
-   */
-  template <typename T>
-  ros::ServiceClient getServiceHandle(const std::string& service_name, double timeout = 5.0)
-  {
-    ros::NodeHandle nh;
-    ros::ServiceClient client = nh.serviceClient<T>(srv_namespace + service_name);
-    ROS_INFO("Waiting for '%s' service...", service_name.c_str());
-    if (client.waitForExistence(ros::Duration(timeout)) == false)
-    {
-      ROS_ERROR("'%s' service not available after %.2f s", service_name.c_str(), timeout);
-      throw ros::Exception(service_name + " service not available");
-    }
-
-    return client;
-  }
 
   inline bool endsWith(const std::string& a, const std::string& b)
   {
@@ -123,6 +105,46 @@ public:
    * @returns True on success, false otherwise.
    */
   bool loadData();
+
+  /**
+   * Save current annotation collection with its data.
+   *
+   * @returns True on success, false otherwise.
+   */
+  bool save();
+
+  /**
+   * @returns True if current collection is saved, false otherwise.
+   */
+  bool isSaved() { return saved; }
+
+  /**
+   * Add an annotation with its data to the collection.
+   *
+   * @param annotation annotation to add.
+   * @param annot_data annotation's data to add.
+   * @returns True on success, false otherwise.
+   */
+  bool add(const world_canvas_msgs::Annotation& annotation,
+           const world_canvas_msgs::AnnotationData& annot_data);
+
+  /**
+   * Update an existing annotation and its data.
+   *
+   * @param annotation annotation to update.
+   * @param annot_data annotation's data to update.
+   * @returns True on success, false otherwise.
+   */
+  bool update(const world_canvas_msgs::Annotation& annotation,
+              const world_canvas_msgs::AnnotationData& annot_data);
+
+  /**
+   * Remove an existing annotation and its data.
+   *
+   * @param id Target annotation's uuid.
+   * @returns True on success, false otherwise.
+   */
+  bool remove(const uuid_msgs::UniqueID& id);
 
   /**
    * Clears RViz visualization markers published on the given topic.
@@ -226,9 +248,18 @@ public:
   const std::vector<world_canvas_msgs::Annotation>& getAnnotations() { return annotations; }
 
   /**
+   * Return the data for the given annotation.
+   *
+   * @param ann target annotation.
+   * @returns Annotation's data.
+   */
+  const world_canvas_msgs::AnnotationData& getData(const world_canvas_msgs::Annotation& ann);
+
+  /**
    * Return the data for annotations of the template type.
    *
-   * @param data Vector of annotations data.
+   * @param data Vector of annotation's data.
+   * @returns The number of annotation's data returned.
    */
   template <typename T>
   unsigned int getData(std::vector<T>& data)

@@ -9,6 +9,8 @@
 #include <world_canvas_msgs/GetAnnotations.h>
 #include <world_canvas_msgs/GetAnnotationsData.h>
 #include <world_canvas_msgs/PubAnnotationsData.h>
+#include <world_canvas_msgs/DeleteAnnotations.h>
+#include <world_canvas_msgs/SaveAnnotationsData.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include "world_canvas_client_cpp/annotation_collection.hpp"
@@ -145,6 +147,240 @@ bool AnnotationCollection::loadData()
     ROS_ERROR("ROS exception caught: %s", e.what());
     return false;
   }
+}
+
+bool AnnotationCollection::save()
+{
+  try
+  {
+    ros::ServiceClient client =
+        this->getServiceHandle<world_canvas_msgs::SaveAnnotationsData>("save_annotations_data");
+
+    // Request server to save current annotations list, with its data
+    ROS_INFO("Requesting server to save annotations");
+    world_canvas_msgs::SaveAnnotationsData srv;
+  //  srv.request.annotations = this->annotations;
+  //  srv.request.data        = this->annots_data;
+
+    // This brittle saving procedure requires parallelly ordered annotations and data vectors
+    // As this don't need to be the case, we must short them; but we need a better saving procedure (TODO)
+    for (unsigned int i = 0; i < this->annotations.size(); i++)
+    {
+      for (unsigned int j = 0; j < this->annots_data.size(); j++)
+      {
+        if (this->annots_data[j].id.uuid == this->annotations[i].data_id.uuid)
+        {
+          ROS_DEBUG("Add annotation for saving with uuid '%s'", uuid::toHexString(this->annotations[i].id).c_str());
+          ROS_DEBUG("Add annot. data for saving with uuid '%s'", uuid::toHexString(this->annots_data[j].id).c_str());
+          srv.request.annotations.push_back(this->annotations[i]);
+          srv.request.data.push_back(this->annots_data[j]);
+          break;
+        }
+      }
+    }
+
+    // Do at least a rudimentary check
+    if (! (this->annotations.size() == this->annots_data.size() == srv.request.annotations.size() == srv.request.data.size()))
+    {
+      ROS_ERROR("Incoherent annotation and data sizes: %lu != %lu != %lu != %lu",
+                this->annotations.size(), this->annots_data.size(), srv.request.annotations.size(), srv.request.data.size());
+    }
+
+    bool result = false;
+    if (client.call(srv))
+    {
+      if (srv.response.result == true)
+      {
+        result = true;
+      }
+      else
+      {
+        ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+      }
+    }
+    else
+    {
+      ROS_ERROR("Failed to call save_annotations_data service");
+    }
+
+    if (result == true)
+      saved = true;
+
+    return result && saveDeletes();
+  }
+  catch (const ros::Exception& e)
+  {
+    ROS_ERROR("ROS exception caught: %s", e.what());
+    return false;
+  }
+}
+
+bool AnnotationCollection::saveDeletes()
+{
+  // We remove from database the annotations doomed by delete method, if any
+  if (annots_to_delete.size() == 0)
+    return true;
+
+  try
+  {
+    ros::ServiceClient client =
+        this->getServiceHandle<world_canvas_msgs::DeleteAnnotations>("delete_annotations");
+
+    // Request server to save current annotations list, with its data
+    ROS_INFO("Requesting server to delete annotations");
+    world_canvas_msgs::DeleteAnnotations srv;
+    srv.request.annotations = annots_to_delete;
+    if (client.call(srv))
+    {
+      if (srv.response.result == true)
+      {
+        return true;
+      }
+      else
+      {
+        ROS_ERROR("Server reported an error: %s", srv.response.message.c_str());
+        return false;
+      }
+    }
+    else
+    {
+      ROS_ERROR("Failed to call delete_annotations service");
+      return false;
+    }
+  }
+  catch (const ros::Exception& e)
+  {
+    ROS_ERROR("ROS exception caught: %s", e.what());
+    return false;
+  }
+}
+
+bool AnnotationCollection::add(const world_canvas_msgs::Annotation& annotation,
+                               const world_canvas_msgs::AnnotationData& annot_data)
+{
+  if (annotation.data_id.uuid != annot_data.id.uuid)
+  {
+    ROS_ERROR("Incoherent annotation and data uuids '%s' != '%s'",
+              uuid::toHexString(annotation.id).c_str(), uuid::toHexString(annot_data.id).c_str());
+    return false;
+  }
+
+  for (unsigned int i = 0; i < this->annotations.size(); i++)
+  {
+    if (this->annotations[i].id.uuid == annotation.id.uuid)
+    {
+      ROS_ERROR("Duplicated annotation with uuid '%s'", uuid::toHexString(annotation.id).c_str());
+      return false;
+    }
+  }
+
+  for (unsigned int i = 0; i < this->annots_data.size(); i++)
+  {
+    if (this->annots_data[i].id.uuid == annot_data.id.uuid)
+    {
+      ROS_ERROR("Duplicated annotation data with uuid '%s'", uuid::toHexString(annot_data.id).c_str());
+      return false;
+    }
+  }
+
+  this->annotations.push_back(annotation);
+  this->annots_data.push_back(annot_data);
+
+  // Re-publish annotations' visual markers to reflect the incorporation
+  this->publishMarkers("annotation_markers");
+
+  saved = false;
+
+  return true;
+}
+
+bool AnnotationCollection::update(const world_canvas_msgs::Annotation& annotation,
+                                  const world_canvas_msgs::AnnotationData& annot_data)
+{
+  if (annotation.data_id.uuid != annot_data.id.uuid)
+  {
+    ROS_ERROR("Incoherent annotation and data uuids '%s' != '%s'",
+              uuid::toHexString(annotation.id).c_str(), uuid::toHexString(annot_data.id).c_str());
+    return false;
+  }
+
+  bool found = false;
+  for (unsigned int i = 0; i < this->annotations.size(); i++)
+  {
+    if (this->annotations[i].id.uuid == annotation.id.uuid)
+    {
+      this->annotations[i] = annotation;
+      found = true;
+      break;
+    }
+  }
+
+  if (found == false)
+  {
+    ROS_ERROR("Annotation uuid '%s' not found", uuid::toHexString(annotation.id).c_str());
+    return false;
+  }
+
+  found = false;
+  for (unsigned int i = 0; i < this->annots_data.size(); i++)
+  {
+    if (this->annots_data[i].id.uuid == annot_data.id.uuid)
+    {
+      this->annots_data[i] = annot_data;
+      found = true;
+      break;
+    }
+  }
+
+  if (found == false)
+  {
+    ROS_ERROR("Annotation data uuid '%s' not found", uuid::toHexString(annot_data.id).c_str());
+    return false;
+  }
+
+  // Re-publish annotations' visual markers to reflect changes
+  this->publishMarkers("annotation_markers");
+
+  saved = false;
+
+  return true;
+}
+
+bool AnnotationCollection::remove(const uuid_msgs::UniqueID& id)
+{
+  for (unsigned int i = 0; i < this->annotations.size(); i++)
+  {
+    if (this->annotations[i].id.uuid == id.uuid)
+    {
+      ROS_DEBUG("Annotation '%s' found", uuid::toHexString(id).c_str());
+
+      for (unsigned int j = 0; j < this->annots_data.size(); j++)
+      {
+        if (this->annots_data[j].id.uuid == this->annotations[i].data_id.uuid)
+        {
+          annots_to_delete.push_back(this->annotations[i]);
+          saved = false;
+
+          ROS_DEBUG("Removed annotation with uuid '%s'", uuid::toHexString(this->annotations[i].id).c_str());
+          ROS_DEBUG("Removed annot. data with uuid '%s'", uuid::toHexString(this->annots_data[j].id).c_str());
+          this->annotations.erase(this->annotations.begin() + i);
+          this->annots_data.erase(this->annots_data.begin() + j);
+
+          // Re-publish annotations' visual markers to reflect the leave
+          this->publishMarkers("annotation_markers");
+
+          return true;
+        }
+      }
+
+      ROS_ERROR("No data found for annotation '%s' (data uuid is '%s')", uuid::toHexString(id).c_str(),
+                uuid::toHexString(this->annotations[i].data_id).c_str());
+      return false;
+    }
+  }
+
+  ROS_WARN("Annotation '%s' not found", uuid::toHexString(id).c_str());
+  return false;
 }
 
 bool AnnotationCollection::clearMarkers(const std::string& topic)
@@ -393,6 +629,20 @@ std::vector<UniqueIDmsg> AnnotationCollection::getAnnotsDataIDs()
     uuids[i] = annotations[i].data_id;
   }
   return uuids;
+}
+
+const world_canvas_msgs::AnnotationData&
+AnnotationCollection::getData(const world_canvas_msgs::Annotation& ann)
+{
+  for (unsigned int i = 0; i < this->annots_data.size(); i++)
+  {
+    if (this->annots_data[i].id.uuid == ann.data_id.uuid)
+    {
+      return this->annots_data[i];
+    }
+  }
+
+  throw ros::Exception("Data uuid not found: " + uuid::toHexString(ann.data_id));
 }
 
 } // namespace wcf
