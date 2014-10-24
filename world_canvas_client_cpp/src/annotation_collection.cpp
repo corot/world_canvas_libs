@@ -176,6 +176,9 @@ bool AnnotationCollection::clearMarkers(const std::string& topic)
 
 bool AnnotationCollection::publishMarkers(const std::string& topic, bool clear_existing)
 {
+  if (clear_existing == true)
+    clearMarkers(topic);
+
   if (this->annotations.size() == 0)
   {
     ROS_ERROR("No annotations retrieved. Nothing to publish!");
@@ -187,9 +190,6 @@ bool AnnotationCollection::publishMarkers(const std::string& topic, bool clear_e
     // Advertise a topic for retrieved annotations' visualization markers
     markers_pub = nh.advertise <visualization_msgs::MarkerArray> (topic, 1, true);
   }
-
-  if (clear_existing == true)
-    clearMarkers(topic);
 
   // Process retrieved data to build markers lists
   visualization_msgs::MarkerArray markers_array;
