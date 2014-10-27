@@ -17,7 +17,7 @@ if __name__ == '__main__':
     world    = rospy.get_param('~world', 'A NEW WORLD')
 
     ac = world_canvas_client.AnnotationCollection(world=world, types=['yocs_msgs/Column'], srv_namespace=namespace)
-    ac.loadData()
+    ac.load_data()
 
     # Add a couple of new annotation, delete one, and save the resulting collection
     annot1 = world_canvas_msgs.msg.Annotation()
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     ac.add(annot1, column1)
     ac.add(annot2, column2)
-    ac.publishMarkers('annotation_markers')
+    ac.publish_markers('annotation_markers')
     ac.save()
     ac.publish(topic_name, 'yocs_msgs/ColumnList', True, True)
     
@@ -66,8 +66,8 @@ if __name__ == '__main__':
     annot1.size.x    = 3.2
     column1.radius = annot1.size.x
     ac.update(annot1, column1)
-    ac.publishMarkers('annotation_markers')
-    column = ac.getData(annot1)
+    ac.publish_markers('annotation_markers')
+    column = ac.get_data(annot1)
     ac.remove(annot2.id)
     ac.save()
 

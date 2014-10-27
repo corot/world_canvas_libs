@@ -62,6 +62,10 @@ class AnnotationCollection:
     
     def __init__(self, world=None, uuids=[], names=[], types=[], keywords=[], relationships=[], srv_namespace=''):
         '''
+        Creates a collection of annotations and its associated data, initially empty.
+        Annotations and data are retrieved from the world canvas server, filtered by
+        the described parameters.
+
         @param world:         Annotations in this collection belong to this world.
         @param uuids:         Filter annotations by their uuid.
         @param names:         Filter annotations by their name.
@@ -70,10 +74,6 @@ class AnnotationCollection:
         @param relationships: Filter annotations by their relationships.
         @param srv_namespace: World canvas handles can be found under this namespace.
         @raise WCFError:      If something went wrong.
-
-        Creates a collection of annotations and its associated data, initially empty.
-        Annotations and data are retrieved from the world canvas server, filtered by
-        the described parameters.
         '''
         if not srv_namespace.endswith('/'):
             self._srv_namespace = srv_namespace + '/'
@@ -86,10 +86,12 @@ class AnnotationCollection:
         
         if world is not None:
             # Filter parameters provided, so don't wait more to retrieve annotations!
-            self.filterBy(world, uuids, names, types, keywords, relationships)
+            self.filter_by(world, uuids, names, types, keywords, relationships)
 
-    def filterBy(self, world, uuids=[], names=[], types=[], keywords=[], relationships=[]):
+    def filter_by(self, world, uuids=[], names=[], types=[], keywords=[], relationships=[]):
         '''
+        Reload annotations collection, filtered by new selection criteria.
+
         @param world:         Annotations in this collection belong to this world.
         @param uuids:         Filter annotations by their uuid.
         @param names:         Filter annotations by their name.
@@ -97,8 +99,6 @@ class AnnotationCollection:
         @param keywords:      Filter annotations by their keywords.
         @param relationships: Filter annotations by their relationships.
         @raise WCFError:      If something went wrong.
-
-        Reload annotations collection, filtered by new selection criteria.
         '''
         rospy.loginfo("Getting annotations for world '%s' and additional filter criteria", world)
         get_anns_srv = self._get_service_handle('get_annotations', world_canvas_msgs.srv.GetAnnotations)
@@ -124,14 +124,14 @@ class AnnotationCollection:
             rospy.logerr(message)
             raise WCFError(message)
 
-    def getAnnotations(self, name=None, type=None):
+    def get_annotations(self, name=None, type=None):
         '''
+        Return the currently loaded annotations, optionally restricted to the given name and/or type.
+
         @param name: Get only annotation(s) with the given name. Can be more than one, as we don't
         enforce uniqueness on annotation names.
         @param type: Get only annotation(s) with the given type.
         @returns Currently loaded annotations matching name and type, or empty string if none.
-
-        Return the currently loaded annotations, optionally restricted to the given name and/or type.
         '''
         ret = []
         if len(self._annotations) == 0:
@@ -150,12 +150,12 @@ class AnnotationCollection:
                 ret = [copy.deepcopy(a) for a in name_filtered]
         return ret
 
-    def loadData(self):
+    def load_data(self):
         '''
+        Load associated data for the current annotations collection.
+
         @returns Number of annotations retrieved.
         @raise WCFError: If something went wrong.
-
-        Load associated data for the current annotations collection.
         '''
         if len(self._annotations) == 0:
             message = "No annotations retrieved. Nothing to load!"
@@ -180,12 +180,12 @@ class AnnotationCollection:
 
         return len(response.data)
 
-    def getData(self, annotation):
+    def get_data(self, annotation):
         '''
+        Get the associated data (ROS message) of a given annotation.
+
         @returns The ROS message associated to the given annotation or None if it was not found.
         @raise WCFError: If something else went wrong.
-
-        Get the associated data (ROS message) of a given annotation.
         '''
         for d in self._annots_data:
             if d.id == annotation.data_id:
@@ -198,7 +198,7 @@ class AnnotationCollection:
                     rospy.logerr(message)
                     raise WCFError(message)
                 try:
-                    object = deserializeMsg(d.data, msg_class)
+                    object = deserialize_msg(d.data, msg_class)
                 except SerializationError as e:
                     message = "Deserialization failed: %s" % str(e)
                     rospy.logerr(message)
@@ -207,17 +207,17 @@ class AnnotationCollection:
         rospy.logwarn("Data uuid not found: " + unique_id.toHexString(annotation.data_id))
         return None
 
-    def getDataOfType(self, type):
+    def get_data_of_type(self, type):
         '''
-        @returns The list of ROS messages of the given type.
-
         Get all associated data (ROS messages) of a given type.
+
+        @returns The list of ROS messages of the given type.
         '''
         result = list()
 
         for d in self._annots_data:
             try:
-                object = deserializeMsg(d.data, type)
+                object = deserialize_msg(d.data, type)
             except SerializationError as e:
                 # rospy.logerr("Deserialization failed: %s' % str(e))
                 # TODO/WARN: this is ok, as I'm assuming that deserialize will always fail with messages of
@@ -231,11 +231,11 @@ class AnnotationCollection:
 
         return result;
 
-    def publishMarkers(self, topic):
+    def publish_markers(self, topic):
         '''
-        @param topic: Where we must publish annotations markers.
-
         Publish RViz visualization markers for the current collection of annotations.
+
+        @param topic: Where we must publish annotations markers.
         '''
         if len(self._annotations) == 0:
             messages = "No annotations retrieved. Nothing to publish!"
@@ -280,6 +280,10 @@ class AnnotationCollection:
 
     def publish(self, topic_name, topic_type=None, by_server=False, as_list=False, list_attribute=None):
         '''
+        Publish the current collection of annotations, by this client or by the server.
+        As we use just one topic, all annotations must be of the same type (function will return
+        with error otherwise).
+
         @param topic_name: Where we must publish annotations data.
         @param topic_type: The message type to publish annotations data.
                            Mandatory if as_list is true; ignored otherwise.
@@ -287,10 +291,6 @@ class AnnotationCollection:
         @param as_list:    If true, annotations will be packed in a list before publishing,
                            so topic_type must be an array of currently loaded annotations.
         @raise WCFError:   If something went wrong.
-
-        Publish the current collection of annotations, by this client or by the server.
-        As we use just one topic, all annotations must be of the same type (function will return
-        with error otherwise).
         '''
         if len(self._annotations) == 0:
             message = "No annotations retrieved. Nothing to publish!"
@@ -351,7 +351,7 @@ class AnnotationCollection:
             objects_pub = rospy.Publisher(topic_name, topic_class, latch=True, queue_size=5)
 
             # Process retrieved data to build annotations lists
-            objects_list = self.getDataOfType(msg_class)
+            objects_list = self.get_data_of_type(msg_class)
 
             # Publish resulting list
             if as_list:
@@ -374,12 +374,12 @@ class AnnotationCollection:
 
     def add(self, annotation, msg=None, gen_uuid=True):
         '''
+        Add a new annotation with a new associated data or for an existing data.
+
         @param annotation: The new annotation.
         @param msg:        Its associated data. If None, we assume that we are adding an annotation to existing data.
         @param gen_uuid:   Generate an unique id for the new annotation or use the received one.
         @raise WCFError:   If something went wrong.
-
-        Add a new annotation with a new associated data or for an existing data.
         '''
         if gen_uuid:
             annotation.id = unique_id.toMsg(unique_id.fromRandom())
@@ -409,7 +409,7 @@ class AnnotationCollection:
             annot_data = world_canvas_msgs.msg.AnnotationData()
             annot_data.id = annotation.data_id
             annot_data.type = annotation.type
-            annot_data.data = serializeMsg(msg)
+            annot_data.data = serialize_msg(msg)
             self._annots_data.append(annot_data)
 
         self._annotations.append(annotation)
@@ -418,11 +418,11 @@ class AnnotationCollection:
 
     def update(self, annotation, msg=None):
         '''
+        Update an existing annotation and optionally its associated data.
+
         @param annotation: The modified annotation.
         @param msg:        Its associated data. If None, just the annotation is updated.
         @raise WCFError:   If something went wrong.
-
-        Update an existing annotation and optionally its associated data.
         '''
         found = False
         for i, a in enumerate(self._annotations):
@@ -444,7 +444,7 @@ class AnnotationCollection:
             if d.id == annotation.data_id:
                 rospy.logdebug("Annotation data with uuid '%s' found", unique_id.toHexString(annotation.data_id))
                 self._annots_data[i].type = annotation.type
-                self._annots_data[i].data = serializeMsg(msg)
+                self._annots_data[i].data = serialize_msg(msg)
                 found = True
                 break
 
@@ -457,12 +457,12 @@ class AnnotationCollection:
 
     def remove(self, uuid):
         '''
+        Delete an annotation with its associated data.
+        WARN/TODO: we are ignoring the case of N annotations - 1 data!
+
         @param uuid: The uuid of the annotation to delete.
         @returns True if successfully removed, False if the annotation was not found.
         @raise WCFError: If something else went wrong.
-
-        Delete an annotation with its associated data.
-        WARN/TODO: we are ignoring the case of N annotations - 1 data!
         '''
         for a in self._annotations:
             if a.id == uuid:
@@ -498,11 +498,11 @@ class AnnotationCollection:
 
     def save(self):
         '''
-        @raise WCFError: If something went wrong.
-
         Save to database current annotations list with their associated data. Also remove from database
         the annotations doomed by delete method, if any.
         WARN/TODO: we are ignoring the case of N annotations - 1 data!
+
+        @raise WCFError: If something went wrong.
         '''
         rospy.loginfo("Requesting server to save annotations")
         annotations = []
@@ -547,10 +547,10 @@ class AnnotationCollection:
 
         self._saved = True
 
-    def isSaved(self):
+    def is_saved(self):
         return self._saved
 
-    def getWorldlist(self):
+    def get_world_list(self):
         '''
         TODO: temporally here until we create a WorldCollection class, as on C++ library.
         
@@ -563,6 +563,8 @@ class AnnotationCollection:
 
     def _get_service_handle(self, service_name, service_type, timeout=5.0):
         '''
+        Create a service client and wait until the service is available.
+
         @param service_name: ROS service name to get, without namespace.
         @param service_type: ROS service type.
         @param timeout: Timeout to wait for the service to come up.
@@ -571,8 +573,6 @@ class AnnotationCollection:
         @rtypes: rospy.ServiceProxy.
 
         @raise  WCFError: If specified timeout is exceeded or shutdown interrupts wait.
-
-        Create a service client and wait until the service is available.
         '''
         try:
             rospy.loginfo("Waiting for '%s' service..." % str(service_name))

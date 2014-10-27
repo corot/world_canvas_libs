@@ -42,7 +42,7 @@ import cStringIO as StringIO
 class SerializationError(Exception):
     pass
 
-def serializeMsg(msg):
+def serialize_msg(msg):
     try:
         buffer = StringIO.StringIO()
         rospy.msg.serialize_message(buffer, 0, msg)
@@ -54,7 +54,7 @@ def serializeMsg(msg):
     finally:
         buffer.close()
 
-def deserializeMsg(ser_msg, msg_class):
+def deserialize_msg(ser_msg, msg_class):
     try:
         msg_queue = list()
         buffer = StringIO.StringIO()
