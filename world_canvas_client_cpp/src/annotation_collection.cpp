@@ -494,8 +494,8 @@ visualization_msgs::Marker AnnotationCollection::makeLabel(const visualization_m
 }
 
 
-bool AnnotationCollection::publish(const std::string& topic_name, bool by_server, bool as_list,
-                                   const std::string& topic_type)
+bool AnnotationCollection::publish(const std::string& topic_name, const std::string& topic_type,
+                                   bool by_server, bool as_list)
 {
   if (this->annotations.size() == 0)
   {
@@ -538,9 +538,24 @@ bool AnnotationCollection::publish(const std::string& topic_name, bool by_server
 
       // Request server to publish the annotations previously retrieved; note that we send the data
       // uuids, that identify the data associated to the annotation instead of the annotation itself
-      ROS_INFO("Requesting server to publish annotations");
+      ROS_INFO("Requesting server to publish annotations of type '%s'", common_tt.c_str());
       world_canvas_msgs::PubAnnotationsData srv;
-      srv.request.annotation_ids = this->getAnnotsDataIDs();
+      if (as_list == true)
+      {
+        // We try to publish all annotations if the user request to do so as a list, but...
+	srv.request.annotation_ids = this->getAnnotsDataIDs();
+      }
+      else
+      {
+        // we take only annotations of the given type if we will publish them one by one, as we will
+        // publish all of them in the same topic
+        // TODO: this is quite confusing: https://github.com/corot/world_canvas_libs/issues/24
+        for (unsigned int i = 0; i < this->annotations.size(); i++)
+        {
+          if (annotations[i].type == common_tt)
+            srv.request.annotation_ids.push_back(annotations[i].data_id);
+        }
+      }
       srv.request.topic_name = topic_name;
       srv.request.topic_type = common_tt;
       srv.request.pub_as_list = as_list;

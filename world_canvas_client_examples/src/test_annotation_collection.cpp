@@ -54,7 +54,7 @@ int main(int argc, char** argv)
   ac.publishMarkers("annotation_markers");
 
   // Request server to publish the annotations
-  ac.publish(topic_name, true, pub_as_list, topic_type);
+  ac.publish(topic_name, topic_type, true, pub_as_list);
 
   std::vector<yocs_msgs::Wall> walls;
   std::vector<yocs_msgs::Column> columns;

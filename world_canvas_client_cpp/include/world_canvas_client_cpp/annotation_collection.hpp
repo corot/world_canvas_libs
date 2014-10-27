@@ -193,20 +193,21 @@ public:
   visualization_msgs::Marker makeLabel(const visualization_msgs::Marker& marker);
 
   /**
-   * Publish the current collection of annotations, by this client or by the server.
-   * As we use just one topic, all annotations must be of the same type (function will
-   * return with error otherwise).
+   * Publish the current annotation collection data, by this client or by the server.
+   * If no topic name is provided, all annotations must be of the same type (function
+   * will return with error otherwise). If it is, only annotation's data of the given
+   * type are published.
    *
    * @param topic_name: Where we must publish annotations data.
+   * @param topic_type: The message type to publish annotations data.
+   *                    Mandatory if as_list is true; ignored otherwise.
    * @param by_server:  Request the server to publish the annotations instead of this client.
    * @param as_list:    If true, annotations will be packed in a list before publishing,
    *                    so topic_type must be an array of currently loaded annotations.
-   * @param topic_type: The message type to publish annotations data.
-   *                    Mandatory if as_list is true; ignored otherwise.
    * @returns True on success, false otherwise.
    */
-  bool publish(const std::string& topic_name, bool by_server = false, bool as_list = false,
-               const std::string& topic_type = "");
+  bool publish(const std::string& topic_name, const std::string& topic_type = "",
+               bool by_server = false, bool as_list = false);
 
   /**
    * Return true if there's an annotation with the given unique id.
