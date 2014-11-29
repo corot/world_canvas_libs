@@ -5,13 +5,14 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   unique_id
   uuid_msgs
+  visualization_msgs
   world_canvas_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES world_canvas_client
-  CATKIN_DEPENDS roscpp unique_id uuid_msgs world_canvas_msgs
+  CATKIN_DEPENDS roscpp unique_id uuid_msgs visualization_msgs world_canvas_msgs
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
