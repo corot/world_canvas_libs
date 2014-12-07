@@ -36,7 +36,6 @@ protected:
   ros::NodeHandle nh;
   ros::Publisher marker_pub;
   ros::Publisher markers_pub;
-  std::string srv_namespace;
 
   FilterCriteria filter;
 
