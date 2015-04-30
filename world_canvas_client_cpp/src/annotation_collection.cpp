@@ -170,8 +170,8 @@ bool AnnotationCollection::save()
       {
         if (this->annots_data[j].id.uuid == this->annotations[i].data_id.uuid)
         {
-          ROS_DEBUG("Add annotation for saving with uuid '%s'", uuid::toHexString(this->annotations[i].id).c_str());
-          ROS_DEBUG("Add annot. data for saving with uuid '%s'", uuid::toHexString(this->annots_data[j].id).c_str());
+          ROS_DEBUG("Add annotation for saving with uuid '%s'", unique_id::toHexString(this->annotations[i].id).c_str());
+          ROS_DEBUG("Add annot. data for saving with uuid '%s'", unique_id::toHexString(this->annots_data[j].id).c_str());
           srv.request.annotations.push_back(this->annotations[i]);
           srv.request.data.push_back(this->annots_data[j]);
           break;
@@ -261,7 +261,7 @@ bool AnnotationCollection::add(const world_canvas_msgs::Annotation& annotation,
   if (annotation.data_id.uuid != annot_data.id.uuid)
   {
     ROS_ERROR("Incoherent annotation and data uuids '%s' != '%s'",
-              uuid::toHexString(annotation.id).c_str(), uuid::toHexString(annot_data.id).c_str());
+              unique_id::toHexString(annotation.id).c_str(), unique_id::toHexString(annot_data.id).c_str());
     return false;
   }
 
@@ -269,7 +269,7 @@ bool AnnotationCollection::add(const world_canvas_msgs::Annotation& annotation,
   {
     if (this->annotations[i].id.uuid == annotation.id.uuid)
     {
-      ROS_ERROR("Duplicated annotation with uuid '%s'", uuid::toHexString(annotation.id).c_str());
+      ROS_ERROR("Duplicated annotation with uuid '%s'", unique_id::toHexString(annotation.id).c_str());
       return false;
     }
   }
@@ -278,7 +278,7 @@ bool AnnotationCollection::add(const world_canvas_msgs::Annotation& annotation,
   {
     if (this->annots_data[i].id.uuid == annot_data.id.uuid)
     {
-      ROS_ERROR("Duplicated annotation data with uuid '%s'", uuid::toHexString(annot_data.id).c_str());
+      ROS_ERROR("Duplicated annotation data with uuid '%s'", unique_id::toHexString(annot_data.id).c_str());
       return false;
     }
   }
@@ -300,7 +300,7 @@ bool AnnotationCollection::update(const world_canvas_msgs::Annotation& annotatio
   if (annotation.data_id.uuid != annot_data.id.uuid)
   {
     ROS_ERROR("Incoherent annotation and data uuids '%s' != '%s'",
-              uuid::toHexString(annotation.id).c_str(), uuid::toHexString(annot_data.id).c_str());
+              unique_id::toHexString(annotation.id).c_str(), unique_id::toHexString(annot_data.id).c_str());
     return false;
   }
 
@@ -317,7 +317,7 @@ bool AnnotationCollection::update(const world_canvas_msgs::Annotation& annotatio
 
   if (found == false)
   {
-    ROS_ERROR("Annotation uuid '%s' not found", uuid::toHexString(annotation.id).c_str());
+    ROS_ERROR("Annotation uuid '%s' not found", unique_id::toHexString(annotation.id).c_str());
     return false;
   }
 
@@ -334,7 +334,7 @@ bool AnnotationCollection::update(const world_canvas_msgs::Annotation& annotatio
 
   if (found == false)
   {
-    ROS_ERROR("Annotation data uuid '%s' not found", uuid::toHexString(annot_data.id).c_str());
+    ROS_ERROR("Annotation data uuid '%s' not found", unique_id::toHexString(annot_data.id).c_str());
     return false;
   }
 
@@ -352,7 +352,7 @@ bool AnnotationCollection::remove(const uuid_msgs::UniqueID& id)
   {
     if (this->annotations[i].id.uuid == id.uuid)
     {
-      ROS_DEBUG("Annotation '%s' found", uuid::toHexString(id).c_str());
+      ROS_DEBUG("Annotation '%s' found", unique_id::toHexString(id).c_str());
 
       for (unsigned int j = 0; j < this->annots_data.size(); j++)
       {
@@ -361,8 +361,8 @@ bool AnnotationCollection::remove(const uuid_msgs::UniqueID& id)
           annots_to_delete.push_back(this->annotations[i]);
           saved = false;
 
-          ROS_DEBUG("Removed annotation with uuid '%s'", uuid::toHexString(this->annotations[i].id).c_str());
-          ROS_DEBUG("Removed annot. data with uuid '%s'", uuid::toHexString(this->annots_data[j].id).c_str());
+          ROS_DEBUG("Removed annotation with uuid '%s'", unique_id::toHexString(this->annotations[i].id).c_str());
+          ROS_DEBUG("Removed annot. data with uuid '%s'", unique_id::toHexString(this->annots_data[j].id).c_str());
           this->annotations.erase(this->annotations.begin() + i);
           this->annots_data.erase(this->annots_data.begin() + j);
 
@@ -373,13 +373,13 @@ bool AnnotationCollection::remove(const uuid_msgs::UniqueID& id)
         }
       }
 
-      ROS_ERROR("No data found for annotation '%s' (data uuid is '%s')", uuid::toHexString(id).c_str(),
-                uuid::toHexString(this->annotations[i].data_id).c_str());
+      ROS_ERROR("No data found for annotation '%s' (data uuid is '%s')", unique_id::toHexString(id).c_str(),
+                unique_id::toHexString(this->annotations[i].data_id).c_str());
       return false;
     }
   }
 
-  ROS_WARN("Annotation '%s' not found", uuid::toHexString(id).c_str());
+  ROS_WARN("Annotation '%s' not found", unique_id::toHexString(id).c_str());
   return false;
 }
 
@@ -611,7 +611,7 @@ const world_canvas_msgs::Annotation& AnnotationCollection::getAnnotation(const U
     if (annotations[i].id.uuid == id.uuid)
       return annotations[i];
   }
-  throw ros::Exception("Uuid not found: " + uuid::toHexString(id));
+  throw ros::Exception("Uuid not found: " + unique_id::toHexString(id));
 }
 
 std::vector<world_canvas_msgs::Annotation>
@@ -657,7 +657,7 @@ AnnotationCollection::getData(const world_canvas_msgs::Annotation& ann)
     }
   }
 
-  throw ros::Exception("Data uuid not found: " + uuid::toHexString(ann.data_id));
+  throw ros::Exception("Data uuid not found: " + unique_id::toHexString(ann.data_id));
 }
 
 } // namespace wcf

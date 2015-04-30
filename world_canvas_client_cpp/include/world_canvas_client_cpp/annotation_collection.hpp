@@ -8,6 +8,8 @@
 #ifndef ANNOTATION_COLLECTION_HPP_
 #define ANNOTATION_COLLECTION_HPP_
 
+#include <unique_id/unique_id.h>
+
 #include <ros/serialization.h>
 #include <ros/serialized_message.h>
 
@@ -16,7 +18,6 @@
 #include <world_canvas_msgs/Annotation.h>
 #include <world_canvas_msgs/AnnotationData.h>
 
-#include "world_canvas_client_cpp/unique_id.hpp"
 #include "world_canvas_client_cpp/filter_criteria.hpp"
 #include "world_canvas_client_cpp/world_canvas_client.hpp"
 
@@ -288,7 +289,7 @@ public:
       try
       {
         ROS_DEBUG("Deserializing object '%s' of type '%s'",
-                  uuid::toHexString(annots_data[i].id).c_str(), type.c_str());
+                  unique_id::toHexString(annots_data[i].id).c_str(), type.c_str());
         ros::serialization::deserializeMessage(sm, object);
         data.push_back(object);
         count++;
