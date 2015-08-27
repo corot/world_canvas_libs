@@ -66,14 +66,14 @@ class AnnotationCollection:
         Annotations and data are retrieved from the world canvas server, filtered by
         the described parameters.
 
-        @param world:         Annotations in this collection belong to this world.
-        @param uuids:         Filter annotations by their uuid.
-        @param names:         Filter annotations by their name.
-        @param types:         Filter annotations by their type.
-        @param keywords:      Filter annotations by their keywords.
-        @param relationships: Filter annotations by their relationships.
-        @param srv_namespace: World canvas handles can be found under this namespace.
-        @raise WCFError:      If something went wrong.
+        :param world:         Annotations in this collection belong to this world.
+        :param uuids:         Filter annotations by their uuid.
+        :param names:         Filter annotations by their name.
+        :param types:         Filter annotations by their type.
+        :param keywords:      Filter annotations by their keywords.
+        :param relationships: Filter annotations by their relationships.
+        :param srv_namespace: World canvas handles can be found under this namespace.
+        :raises WCFError:      If something went wrong.
         '''
         if not srv_namespace.endswith('/'):
             self._srv_namespace = srv_namespace + '/'
@@ -92,13 +92,13 @@ class AnnotationCollection:
         '''
         Reload annotations collection, filtered by new selection criteria.
 
-        @param world:         Annotations in this collection belong to this world.
-        @param uuids:         Filter annotations by their uuid.
-        @param names:         Filter annotations by their name.
-        @param types:         Filter annotations by their type.
-        @param keywords:      Filter annotations by their keywords.
-        @param relationships: Filter annotations by their relationships.
-        @raise WCFError:      If something went wrong.
+        :param world:         Annotations in this collection belong to this world.
+        :param uuids:         Filter annotations by their uuid.
+        :param names:         Filter annotations by their name.
+        :param types:         Filter annotations by their type.
+        :param keywords:      Filter annotations by their keywords.
+        :param relationships: Filter annotations by their relationships.
+        :raises WCFError:      If something went wrong.
         '''
         rospy.loginfo("Getting annotations for world '%s' and additional filter criteria", world)
         get_anns_srv = self._get_service_handle('get_annotations', world_canvas_msgs.srv.GetAnnotations)
@@ -128,10 +128,9 @@ class AnnotationCollection:
         '''
         Return the currently loaded annotations, optionally restricted to the given name and/or type.
 
-        @param name: Get only annotation(s) with the given name. Can be more than one, as we don't
-        enforce uniqueness on annotation names.
-        @param type: Get only annotation(s) with the given type.
-        @returns Currently loaded annotations matching name and type, or empty string if none.
+        :param name: Get only annotation(s) with the given name. Can be more than one, as we don't enforce uniqueness on annotation names.
+        :param type: Get only annotation(s) with the given type.
+        :returns: Currently loaded annotations matching name and type, or empty string if none.
         '''
         ret = []
         if len(self._annotations) == 0:
@@ -154,8 +153,8 @@ class AnnotationCollection:
         '''
         Load associated data for the current annotations collection.
 
-        @returns Number of annotations retrieved.
-        @raise WCFError: If something went wrong.
+        :returns: Number of annotations retrieved.
+        :raises WCFError: If something went wrong.
         '''
         if len(self._annotations) == 0:
             message = "No annotations retrieved. Nothing to load!"
@@ -184,8 +183,8 @@ class AnnotationCollection:
         '''
         Get the associated data (ROS message) of a given annotation.
 
-        @returns The ROS message associated to the given annotation or None if it was not found.
-        @raise WCFError: If something else went wrong.
+        :returns: The ROS message associated to the given annotation or None if it was not found.
+        :raises WCFError: If something else went wrong.
         '''
         for d in self._annots_data:
             if d.id == annotation.data_id:
@@ -211,7 +210,7 @@ class AnnotationCollection:
         '''
         Get all associated data (ROS messages) of a given type.
 
-        @returns The list of ROS messages of the given type.
+        :returns: The list of ROS messages of the given type.
         '''
         result = list()
 
@@ -235,7 +234,7 @@ class AnnotationCollection:
         '''
         Publish RViz visualization markers for the current collection of annotations.
 
-        @param topic: Where we must publish annotations markers.
+        :param topic: Where we must publish annotations markers.
         '''
         if len(self._annotations) == 0:
             messages = "No annotations retrieved. Nothing to publish!"
@@ -284,13 +283,13 @@ class AnnotationCollection:
         As we use just one topic, all annotations must be of the same type (function will return
         with error otherwise).
 
-        @param topic_name: Where we must publish annotations data.
-        @param topic_type: The message type to publish annotations data.
+        :param topic_name: Where we must publish annotations data.
+        :param topic_type: The message type to publish annotations data.
                            Mandatory if as_list is true; ignored otherwise.
-        @param by_server:  Request the server to publish the annotations instead of this client.
-        @param as_list:    If true, annotations will be packed in a list before publishing,
+        :param by_server:  Request the server to publish the annotations instead of this client.
+        :param as_list:    If true, annotations will be packed in a list before publishing,
                            so topic_type must be an array of currently loaded annotations.
-        @raise WCFError:   If something went wrong.
+        :raises WCFError:   If something went wrong.
         '''
         if len(self._annotations) == 0:
             message = "No annotations retrieved. Nothing to publish!"
@@ -376,10 +375,10 @@ class AnnotationCollection:
         '''
         Add a new annotation with a new associated data or for an existing data.
 
-        @param annotation: The new annotation.
-        @param msg:        Its associated data. If None, we assume that we are adding an annotation to existing data.
-        @param gen_uuid:   Generate an unique id for the new annotation or use the received one.
-        @raise WCFError:   If something went wrong.
+        :param annotation: The new annotation.
+        :param msg:        Its associated data. If None, we assume that we are adding an annotation to existing data.
+        :param gen_uuid:   Generate an unique id for the new annotation or use the received one.
+        :raises WCFError:   If something went wrong.
         '''
         if gen_uuid:
             annotation.id = unique_id.toMsg(unique_id.fromRandom())
@@ -420,9 +419,9 @@ class AnnotationCollection:
         '''
         Update an existing annotation and optionally its associated data.
 
-        @param annotation: The modified annotation.
-        @param msg:        Its associated data. If None, just the annotation is updated.
-        @raise WCFError:   If something went wrong.
+        :param annotation: The modified annotation.
+        :param msg:        Its associated data. If None, just the annotation is updated.
+        :raises WCFError:   If something went wrong.
         '''
         found = False
         for i, a in enumerate(self._annotations):
@@ -460,9 +459,9 @@ class AnnotationCollection:
         Delete an annotation with its associated data.
         WARN/TODO: we are ignoring the case of N annotations - 1 data!
 
-        @param uuid: The uuid of the annotation to delete.
-        @returns True if successfully removed, False if the annotation was not found.
-        @raise WCFError: If something else went wrong.
+        :param uuid: The uuid of the annotation to delete.
+        :returns True if successfully removed, False if the annotation was not found.
+        :raises WCFError: If something else went wrong.
         '''
         for a in self._annotations:
             if a.id == uuid:
@@ -502,7 +501,7 @@ class AnnotationCollection:
         the annotations doomed by delete method, if any.
         WARN/TODO: we are ignoring the case of N annotations - 1 data!
 
-        @raise WCFError: If something went wrong.
+        :raises WCFError: If something went wrong.
         '''
         rospy.loginfo("Requesting server to save annotations")
         annotations = []
@@ -554,7 +553,7 @@ class AnnotationCollection:
         '''
         TODO: temporally here until we create a WorldCollection class, as on C++ library.
         
-        @returns Currently available world list in the world canvas server
+        :returns: Currently available world list in the world canvas server
         '''
         get_world_list_srv = self._get_service_handle('list_worlds', world_canvas_msgs.srv.ListWorlds)
         response = get_world_list_srv()
@@ -565,14 +564,14 @@ class AnnotationCollection:
         '''
         Create a service client and wait until the service is available.
 
-        @param service_name: ROS service name to get, without namespace.
-        @param service_type: ROS service type.
-        @param timeout: Timeout to wait for the service to come up.
+        :param service_name: ROS service name to get, without namespace.
+        :param service_type: ROS service type.
+        :param timeout: Timeout to wait for the service to come up.
 
-        @returns: Service handle.
-        @rtypes: rospy.ServiceProxy.
+        :returns: Service handle.
+        :rtypes: rospy.ServiceProxy.
 
-        @raise  WCFError: If specified timeout is exceeded or shutdown interrupts wait.
+        :raises  WCFError: If specified timeout is exceeded or shutdown interrupts wait.
         '''
         try:
             rospy.loginfo("Waiting for '%s' service..." % str(service_name))
