@@ -25,4 +25,7 @@
   <run_depend>python-pymongo</run_depend>
   <run_depend>visualization_msgs</run_depend>
   <run_depend>world_canvas_msgs</run_depend>
+  <export>
+    <rosdoc config="rosdoc.yaml"/>
+  </export>
 </package>
